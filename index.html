@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>球是沅的 · 頻道管理</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{ color-scheme: light;
+    --bg:#f6f7f9; --card:#ffffff; --card2:#f1f3f6; --border:#e2e6ec;
+    --text:#1c2333; --muted:#6b7280; --accent:#e5484d; --accent2:#e8930c;
+    --green:#18a058; --blue:#2f6fed; --purple:#7c5cd6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+  body{background:var(--bg);color:var(--text);min-height:100vh;padding:16px}
+  header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  h1{font-size:19px;display:flex;align-items:center;gap:8px}
+  h1 .logo{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px}
+  .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+  .stat .num{font-size:22px;font-weight:700}
+  .stat .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+  .stat.streak .num{color:var(--accent2)} .stat.week .num{color:var(--green)}
+  .stat.todo .num{color:var(--blue)} .stat.late .num{color:var(--accent)}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:18px;cursor:pointer;font-size:13px}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn{background:var(--blue);color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  .btn.green{background:var(--green)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.big{width:100%;padding:12px;font-size:15px;margin-top:10px}
+  /* 今日 */
+  .todaycard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px}
+  .todaycard h2{font-size:15px;margin-bottom:4px}
+  .todaycard .big-title{font-size:18px;font-weight:700;margin:8px 0}
+  .prog{display:flex;gap:4px;margin:12px 0}
+  .prog .p{flex:1;text-align:center;font-size:11px;padding:8px 2px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--muted)}
+  .prog .p.on{background:var(--green);color:#fff;font-weight:700;border-color:var(--green)}
+  .prog .p.cur{border-color:var(--accent2);color:var(--accent2);font-weight:700}
+  .donebanner{background:#e6f7ee;border:1px solid var(--green);color:var(--green);border-radius:10px;padding:14px;text-align:center;font-weight:700;font-size:15px}
+  .section-title{font-size:14px;font-weight:700;margin:14px 0 8px;color:var(--text)}
+  /* 看板 */
+  .board{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  @media(max-width:1000px){.board{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:600px){.board{grid-template-columns:repeat(2,1fr)}}
+  .col{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px;min-height:100px}
+  .col h3{font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+  .col h3 .cnt{background:var(--card2);border-radius:10px;padding:0 7px;font-size:11px}
+  .vcard{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:9px;margin-bottom:7px;cursor:pointer}
+  .vcard:hover{border-color:var(--blue)}
+  .vcard.overdue{border-color:var(--accent)}
+  .vcard .t{font-size:12.5px;font-weight:600;line-height:1.4;word-break:break-all}
+  .vcard .meta{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+  .chip{font-size:10.5px;padding:1px 7px;border-radius:10px}
+  .chip.short{background:#fdeaea;color:var(--accent)} .chip.long{background:#f0eafd;color:var(--purple)}
+  .chip.date{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
+  .chip.warn{background:#fdeaea;color:var(--accent);font-weight:700}
+  .vcard .quick{margin-top:7px}
+  /* 靈感庫 */
+  .idearow{display:flex;gap:8px;margin-bottom:12px}
+  .idearow input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:14px;color:var(--text)}
+  .idea{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .idea .txt{font-size:13.5px;flex:1;min-width:150px}
+  .idea .acts{display:flex;gap:6px}
+  /* 趨勢 */
+  .chartbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+  .chartbox h3{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .chartwrap{position:relative;height:220px}
+  /* 列表 */
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+  th,td{padding:9px 10px;text-align:left;font-size:12.5px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;background:var(--card2)}
+  tr:hover td{background:var(--card2);cursor:pointer}
+  .stage-pill{font-size:11px;padding:2px 9px;border-radius:10px;background:var(--card2);border:1px solid var(--border);white-space:nowrap}
+  /* 回顧 */
+  .review{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .weekgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:12px 0}
+  .day{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center;font-size:11px}
+  .day .d{color:var(--muted)} .day .mark{font-size:17px;margin-top:3px}
+  .day.done{border-color:var(--green);background:#e6f7ee}
+  .day.miss{border-color:var(--accent);background:#fdeaea}
+  .day.future{opacity:.45}
+  .summarybox{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;white-space:pre-wrap;font-size:12.5px;line-height:1.75;margin-top:10px}
+  .toolrow{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  /* 彈窗 */
+  .overlay{position:fixed;inset:0;background:rgba(20,25,40,.45);display:none;align-items:center;justify-content:center;z-index:10;padding:14px}
+  .overlay.show{display:flex}
+  .modal{background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+  .modal h2{font-size:16px;margin-bottom:14px}
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .field input,.field select,.field textarea{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:14px}
+  .field textarea{resize:vertical;min-height:70px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal .actions{display:flex;gap:8px;justify-content:space-between;margin-top:14px}
+  .del{background:transparent;border:1px solid var(--accent);color:var(--accent);padding:7px 13px;border-radius:8px;cursor:pointer;font-size:13px}
+  .empty{color:var(--muted);text-align:center;padding:36px;font-size:13.5px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;border-radius:20px;font-weight:700;font-size:13px;display:none;z-index:20}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span class="logo">🏀</span>球是沅的 · 頻道管理</h1>
+    <div class="sub" id="todayLine"></div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a class="btn ghost" href="熱門情報中心.html" style="text-decoration:none">📡 情報中心</a>
+    <button class="btn green" onclick="syncYT(false)">🔄 同步 YT</button>
+    <button class="btn ghost" onclick="openSettings()">⚙️</button>
+    <button class="btn" onclick="openModal()">＋ 新增影片</button>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat streak"><div class="num" id="stStreak">0</div><div class="lbl">🔥 連續上片天數</div></div>
+  <div class="stat week"><div class="num" id="stWeek">0</div><div class="lbl">本週已發布</div></div>
+  <div class="stat todo"><div class="num" id="stTodo">0</div><div class="lbl">進行中</div></div>
+  <div class="stat late"><div class="num" id="stLate">0</div><div class="lbl">逾期</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-view="todayV">☀️ 今日</div>
+  <div class="tab" data-view="board">📋 看板</div>
+  <div class="tab" data-view="ideas">💡 靈感庫</div>
+  <div class="tab" data-view="topics">🔥 話題</div>
+  <div class="tab" data-view="trend">📈 趨勢</div>
+  <div class="tab" data-view="review">📊 週回顧</div>
+  <div class="tab" data-view="list">📄 全部</div>
+</div>
+
+<div id="v_todayV"></div>
+<div id="v_board" style="display:none"></div>
+<div id="v_ideas" style="display:none"></div>
+<div id="v_topics" style="display:none"></div>
+<div id="v_trend" style="display:none">
+  <div class="chartbox"><h3>已發布影片觀看數(依發布日)</h3><div class="chartwrap"><canvas id="chViews"></canvas></div></div>
+  <div class="chartbox"><h3>每週發布數(近 8 週)</h3><div class="chartwrap"><canvas id="chWeekly"></canvas></div></div>
+  <div class="sub" style="text-align:center">觀看數要在影片卡片裡填入才會出現在圖上</div>
+</div>
+<div id="v_review" style="display:none"></div>
+<div id="v_list" style="display:none"></div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">新增影片</h2>
+    <div class="prog" id="stagebar"></div>
+    <div class="field"><label>標題</label><input id="fTitle" placeholder="影片標題或主題"></div>
+    <div class="row2">
+      <div class="field"><label>類型</label><select id="fType"><option value="short">短影片</option><option value="long">長片</option></select></div>
+      <div class="field"><label>預計發布日</label><input id="fDate" type="date"></div>
+    </div>
+    <div class="field"><label>腳本 / 備註</label><textarea id="fNotes" placeholder="腳本重點、素材清單、拍攝提醒…"></textarea></div>
+    <div class="field"><label>YouTube 連結</label><input id="fLink" placeholder="https://youtube.com/..."></div>
+    <div class="field"><label>🧠 AI 內容摘要</label>
+      <div id="fSummary" class="summarybox" style="margin:0">尚未產生</div>
+      <button class="btn ghost big" style="margin-top:6px" onclick="summarizeVideo(this)">🧠 AI 摘要影片內容(公開影片,用連結)</button>
+      <input id="fLocalVid" type="file" accept="video/*" style="display:none" onchange="analyzeLocalVideo(this)">
+      <button class="btn ghost big" style="margin-top:6px" onclick="document.getElementById('fLocalVid').click()">📁 上傳本地影片分析(草稿/私人/未列出用)</button>
+    </div>
+    <div class="row2">
+      <div class="field"><label>觀看數</label><input id="fViews" type="number" min="0"></div>
+      <div class="field"><label>按讚數</label><input id="fLikes" type="number" min="0"></div>
+    </div>
+    <div class="actions">
+      <button class="del" id="btnDel" onclick="delVideo()" style="display:none">刪除</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn ghost" onclick="closeModal()">取消</button>
+        <button class="btn" onclick="saveVideo()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- YT 設定彈窗 -->
+<div class="overlay" id="ytOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h2>⚙️ YouTube 連線設定</h2>
+    <div class="field"><label>頻道代號(@handle)</label><input id="fHandle" placeholder="例如 @qiushiyuande"></div>
+    <div class="field"><label>YouTube Data API 金鑰</label><input id="fKey" type="password" placeholder="AIza..."></div>
+    <div class="field"><label>OAuth 用戶端 ID(進階,分析未公開影片用)</label><input id="fClientId" placeholder="xxxx.apps.googleusercontent.com"></div>
+    <div class="field"><label>Gemini API 金鑰(可填多把,用逗號分隔,額度自動輪替)</label><input id="fGemKey" type="password" placeholder="AIza...,AIza...(不同 Google 帳號各產一把,額度×N)"></div>
+    <div class="field"><label>Gemini 模型(額度滿會自動降級到 flash-lite)</label><select id="fGemModel">
+      <option value="gemini-2.5-flash">gemini-2.5-flash(預設,品質佳,免費額度較少)</option>
+      <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite(免費額度多、速度快)</option>
+      <option value="gemini-2.0-flash">gemini-2.0-flash(備用)</option>
+    </select></div>
+    <div class="field"><label>話題關鍵字(逗號分隔,最多12個,可放人名追個人動態)</label><input id="fTopicKw" placeholder="預設含:台灣/韓國啦啦隊、李多慧、安芝儇、林襄、峮峮、李雅英、河智媛、邊荷律…"></div>
+    <button class="btn big" style="margin:0 0 12px" onclick="oauthLogin()">🔐 登入 Google(讀取私人/未列出影片)</button>
+    <div style="display:flex;gap:8px;margin:0 0 12px">
+      <button class="btn ghost" style="flex:1" onclick="exportData()">⬇️ 匯出備份</button>
+      <button class="btn ghost" style="flex:1" onclick="document.getElementById('impFile').click()">⬆️ 匯入備份</button>
+      <input id="impFile" type="file" accept=".json" style="display:none" onchange="importData(this)">
+    </div>
+    <div class="summarybox" style="margin:0 0 12px;font-size:12px">
+📌 API 金鑰(基本,約5分鐘):
+1. console.cloud.google.com 建立專案
+2. 「API和服務」→「程式庫」→ 啟用 YouTube Data API v3
+3. 「憑證」→「建立憑證」→「API 金鑰」
+
+📌 OAuth 用戶端 ID(進階,分析未公開影片):
+1. 同專案 →「OAuth 同意畫面」→ 外部 → 測試使用者加入自己的 Gmail
+2. 「憑證」→「建立憑證」→「OAuth 用戶端 ID」→ 網頁應用程式
+3. 「已授權的 JavaScript 來源」加入 http://localhost:8787
+4. 貼上 ID 後,改用「啟動儀表板.bat」開啟本頁,再按上面登入
+
+所有金鑰只存在你這台電腦的瀏覽器裡。</div>
+    <div class="actions">
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn ghost" onclick="closeSettings()">取消</button>
+        <button class="btn green" onclick="saveSettings()">儲存並同步</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STAGES = ['企劃','拍攝','剪輯','縮圖/標題','上傳','已發布'];
+const KEY='ysyd_videos', KEY_I='ysyd_ideas';
+let videos=[], ideas=[], editId=null, curView='todayV', modalStage=0, reviewOffset=0;
+let chViews=null, chWeekly=null;
+
+const fmt=d=>{const y=d.getFullYear(),m=('0'+(d.getMonth()+1)).slice(-2),dd=('0'+d.getDate()).slice(-2);return y+'-'+m+'-'+dd};
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const todayStr=()=>fmt(today());
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function load(){try{videos=JSON.parse(localStorage.getItem(KEY))||[]}catch(e){videos=[]}
+  try{ideas=JSON.parse(localStorage.getItem(KEY_I))||[]}catch(e){ideas=[]}}
+function save(){localStorage.setItem(KEY,JSON.stringify(videos));localStorage.setItem(KEY_I,JSON.stringify(ideas))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',2800)}
+
+// 每日自動建立短影片任務
+function autoCreateDaily(){
+  const t=todayStr();
+  if(!videos.some(v=>v.type==='short'&&v.date===t)){
+    const d=today();
+    videos.push({id:uid(),type:'short',date:t,title:`${d.getMonth()+1}/${d.getDate()} 每日短影片`,stage:0,notes:'',link:'',views:'',likes:'',auto:true});
+    save();
+    toast(`已自動建立今天的短影片任務 ✅`);
+  }
+}
+
+// 統計
+function calcStreak(){
+  let s=0;const d=today();
+  const pub=new Set(videos.filter(v=>v.type==='short'&&v.stage===5).map(v=>v.date));
+  if(pub.has(fmt(d)))s++;
+  d.setDate(d.getDate()-1);
+  while(pub.has(fmt(d))){s++;d.setDate(d.getDate()-1)}
+  return s;
+}
+function weekRange(off){
+  const d=today();const dow=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-dow-off*7);
+  const s=new Date(d),e=new Date(d);e.setDate(e.getDate()+6);
+  return [s,e];
+}
+function renderStats(){
+  const [ws,we]=weekRange(0);
+  document.getElementById('stStreak').textContent=calcStreak();
+  document.getElementById('stWeek').textContent=videos.filter(v=>v.stage===5&&v.date>=fmt(ws)&&v.date<=fmt(we)).length;
+  document.getElementById('stTodo').textContent=videos.filter(v=>v.stage<5).length;
+  document.getElementById('stLate').textContent=videos.filter(v=>v.stage<5&&v.date<todayStr()).length;
+}
+
+// ── 今日 ──
+function renderToday(){
+  const el=document.getElementById('v_todayV');
+  const t=todayStr();
+  const todays=videos.filter(v=>v.date===t&&v.stage<5).sort((a,b)=>a.type<b.type?1:-1);
+  const overdue=videos.filter(v=>v.stage<5&&v.date<t).sort((a,b)=>a.date<b.date?-1:1);
+  const doneToday=videos.filter(v=>v.date===t&&v.stage===5);
+  let html='';
+  if(!todays.length&&doneToday.length){
+    html+=`<div class="donebanner">🎉 今天的影片都發布了!連續上片 ${calcStreak()} 天,讚啦</div>`;
+  }
+  todays.forEach(v=>{
+    html+=`<div class="todaycard">
+      <h2>${v.type==='short'?'☀️ 今日短影片':'🎬 今日長片'}</h2>
+      <div class="big-title">${esc(v.title)}</div>
+      <div class="prog">${STAGES.map((s,i)=>`<div class="p ${i<v.stage?'on':''} ${i===v.stage?'cur':''}">${s}</div>`).join('')}</div>
+      ${v.notes?`<div class="sub" style="white-space:pre-wrap;margin-bottom:6px">📝 ${esc(v.notes)}</div>`:''}
+      <button class="btn green big" onclick="advance('${v.id}')">✔ 完成「${STAGES[v.stage]}」→ 進入「${STAGES[Math.min(v.stage+1,5)]}」</button>
+      <button class="btn ghost big" onclick="openModal('${v.id}')">編輯內容 / 填腳本</button>
+    </div>`;
+  });
+  if(overdue.length){
+    html+=`<div class="section-title">⚠️ 逾期未完成(${overdue.length})</div>`;
+    overdue.forEach(v=>{
+      html+=`<div class="vcard overdue" onclick="openModal('${v.id}')" style="background:var(--card)">
+        <div class="t">${esc(v.title)}</div>
+        <div class="meta"><span class="chip ${v.type}">${v.type==='short'?'短':'長'}</span><span class="chip date">${v.date.slice(5).replace('-','/')}</span><span class="chip warn">${STAGES[v.stage]}</span></div>
+        <div class="quick"><button class="btn sm" onclick="event.stopPropagation();advance('${v.id}')">→ ${STAGES[v.stage+1]}</button>
+        <button class="btn sm ghost" onclick="event.stopPropagation();moveToToday('${v.id}')">改到今天</button></div>
+      </div>`;
+    });
+  }
+  // 快速記靈感
+  html+=`<div class="section-title">💡 突然想到點子?</div>
+    <div class="idearow"><input id="quickIdea" placeholder="快速記下影片靈感,按 Enter" onkeydown="if(event.key==='Enter')addIdea('quickIdea')">
+    <button class="btn" onclick="addIdea('quickIdea')">記下</button></div>`;
+  el.innerHTML=html;
+}
+function moveToToday(id){const v=videos.find(x=>x.id===id);if(v){v.date=todayStr();save();renderAll()}}
+
+// ── 看板 ──
+function renderBoard(){
+  const el=document.getElementById('v_board');
+  let html='<div class="board">';
+  STAGES.forEach((s,i)=>{
+    const items=videos.filter(v=>v.stage===i).sort((a,b)=>a.date<b.date?-1:1)
+      .filter(v=>i<5||v.date>=fmt(new Date(Date.now()-14*864e5)));
+    html+=`<div class="col"><h3>${s}<span class="cnt">${items.length}</span></h3>`;
+    items.forEach(v=>{
+      const od=v.stage<5&&v.date<todayStr();
+      html+=`<div class="vcard${od?' overdue':''}" onclick="openModal('${v.id}')">
+        <div class="t">${esc(v.title)}</div>
+        <div class="meta"><span class="chip ${v.type}">${v.type==='short'?'短':'長'}</span><span class="chip date">${v.date.slice(5).replace('-','/')}</span>${od?'<span class="chip warn">逾期</span>':''}</div>
+        ${i<5?`<div class="quick"><button class="btn sm" onclick="event.stopPropagation();advance('${v.id}')">→ ${STAGES[i+1]}</button></div>`:''}
+      </div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html+'</div>';
+}
+
+// ── 靈感庫 ──
+function renderIdeas(){
+  const el=document.getElementById('v_ideas');
+  let html=`<div class="idearow"><input id="ideaInput" placeholder="輸入影片靈感,按 Enter 新增" onkeydown="if(event.key==='Enter')addIdea('ideaInput')">
+    <button class="btn" onclick="addIdea('ideaInput')">＋ 新增</button></div>`;
+  if(!ideas.length) html+='<div class="empty">還沒有靈感,想到什麼就先記下來 💡</div>';
+  [...ideas].reverse().forEach(i=>{
+    html+=`<div class="idea"><div class="txt">${esc(i.text)}</div>
+      <div class="acts">
+        <button class="btn sm green" onclick="ideaToVideo('${i.id}','short')">→ 短影片</button>
+        <button class="btn sm" onclick="ideaToVideo('${i.id}','long')">→ 長片</button>
+        <button class="btn sm ghost" onclick="delIdea('${i.id}')">✕</button>
+      </div></div>`;
+  });
+  el.innerHTML=html;
+}
+function addIdea(inputId){
+  const inp=document.getElementById(inputId);
+  const t=inp.value.trim();
+  if(!t)return;
+  ideas.push({id:uid(),text:t,createdAt:todayStr()});
+  inp.value='';save();toast('靈感已記下 💡');
+  if(curView==='ideas')renderIdeas();
+}
+function delIdea(id){ideas=ideas.filter(x=>x.id!==id);save();renderIdeas()}
+function ideaToVideo(id,type){
+  const i=ideas.find(x=>x.id===id);if(!i)return;
+  videos.push({id:uid(),type,date:todayStr(),title:i.text,stage:0,notes:'',link:'',views:'',likes:''});
+  ideas=ideas.filter(x=>x.id!==id);
+  save();toast(`已轉成${type==='short'?'短影片':'長片'}任務 🎬`);renderAll();
+  openModal(videos[videos.length-1].id);
+}
+
+// ── 趨勢圖 ──
+function renderTrend(){
+  const pub=videos.filter(v=>v.stage===5&&v.views!==''&&v.views!=null).sort((a,b)=>a.date<b.date?-1:1);
+  const ctx1=document.getElementById('chViews');
+  if(chViews)chViews.destroy();
+  chViews=new Chart(ctx1,{type:'line',
+    data:{labels:pub.map(v=>v.date.slice(5).replace('-','/')),
+      datasets:[{label:'觀看數',data:pub.map(v=>+v.views||0),borderColor:'#2f6fed',backgroundColor:'rgba(47,111,237,.12)',fill:true,tension:.3,pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:its=>pub[its[0].dataIndex].title}}},scales:{y:{beginAtZero:true}}}});
+  // 每週發布數
+  const labels=[],counts=[];
+  for(let off=7;off>=0;off--){
+    const [ws,we]=weekRange(off);
+    labels.push(`${ws.getMonth()+1}/${ws.getDate()}`);
+    counts.push(videos.filter(v=>v.stage===5&&v.date>=fmt(ws)&&v.date<=fmt(we)).length);
+  }
+  const ctx2=document.getElementById('chWeekly');
+  if(chWeekly)chWeekly.destroy();
+  chWeekly=new Chart(ctx2,{type:'bar',
+    data:{labels,datasets:[{label:'發布數',data:counts,backgroundColor:'#18a058',borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+}
+
+// ── 週回顧 ──
+function renderReview(){
+  const el=document.getElementById('v_review');
+  const [ws,we]=weekRange(reviewOffset);
+  const label=reviewOffset===0?'本週':reviewOffset===1?'上週':`${reviewOffset}週前`;
+  const days=['一','二','三','四','五','六','日'];
+  const tStr=todayStr();
+  let grid='<div class="weekgrid">';const weekVideos=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(d.getDate()+i);const ds=fmt(d);
+    const pub=videos.filter(v=>v.date===ds&&v.stage===5);
+    weekVideos.push(...videos.filter(v=>v.date===ds));
+    const future=ds>tStr;
+    grid+=`<div class="day ${future?'future':pub.length?'done':'miss'}"><div class="d">${days[i]} ${d.getMonth()+1}/${d.getDate()}</div><div class="mark">${future?'·':pub.length?'✅':'❌'}</div><div>${pub.length?pub.length+'支':''}</div></div>`;
+  }
+  grid+='</div>';
+  const pubList=weekVideos.filter(v=>v.stage===5),pendList=weekVideos.filter(v=>v.stage<5);
+  const tv=pubList.reduce((s,v)=>s+(+v.views||0),0);
+  let sm=`📊 ${label}回顧(${fmt(ws).slice(5)} ~ ${fmt(we).slice(5)})\n已發布:${pubList.length} 支(短 ${pubList.filter(v=>v.type==='short').length}、長 ${pubList.filter(v=>v.type==='long').length})\n未完成:${pendList.length} 支\n`;
+  if(tv)sm+=`總觀看:${tv.toLocaleString()}\n`;
+  sm+=`🔥 連續上片:${calcStreak()} 天`;
+  if(pendList.length)sm+=`\n\n⚠️ 待處理:\n`+pendList.map(v=>`・${v.title}(${STAGES[v.stage]})`).join('\n');
+  if(pubList.length)sm+=`\n\n✅ 已發布:\n`+pubList.map(v=>`・${v.title}${v.views?` — ${(+v.views).toLocaleString()} 觀看`:''}`).join('\n');
+  el.innerHTML=`<div class="review">
+    <div class="toolrow"><h2 style="font-size:15px">📊 ${label}回顧</h2>
+      <div style="display:flex;gap:6px">
+        <button class="btn ghost sm" onclick="reviewOffset++;renderReview()">← 前一週</button>
+        <button class="btn ghost sm" onclick="if(reviewOffset>0){reviewOffset--;renderReview()}">下一週 →</button>
+        <button class="btn sm" onclick="copySummary()">📋 複製摘要</button>
+      </div></div>
+    ${grid}<div class="summarybox" id="summaryText">${esc(sm)}</div></div>`;
+}
+function copySummary(){navigator.clipboard.writeText(document.getElementById('summaryText').textContent).then(()=>toast('摘要已複製 📋'))}
+
+// ── 全部 ──
+function renderList(){
+  const el=document.getElementById('v_list');
+  if(!videos.length){el.innerHTML='<div class="empty">還沒有影片</div>';return}
+  const sorted=[...videos].sort((a,b)=>a.date<b.date?1:-1);
+  let html=`<table><tr><th>日期</th><th>標題</th><th>類型</th><th>階段</th><th>觀看</th><th>連結</th></tr>`;
+  sorted.forEach(v=>{
+    html+=`<tr onclick="openModal('${v.id}')"><td>${v.date}</td><td>${esc(v.title)}</td>
+      <td><span class="chip ${v.type}">${v.type==='short'?'短影片':'長片'}</span></td>
+      <td><span class="stage-pill">${v.stage===5?'✅ ':''}${STAGES[v.stage]}</span></td>
+      <td>${v.views||'-'}</td>
+      <td>${v.link?`<a href="${esc(v.link)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--blue)">開啟</a>`:'-'}</td></tr>`;
+  });
+  el.innerHTML=html+'</table>';
+}
+
+// ── 彈窗 ──
+function openModal(id){
+  editId=id||null;
+  const v=id?videos.find(x=>x.id===id):null;
+  document.getElementById('modalTitle').textContent=v?'編輯影片':'新增影片';
+  document.getElementById('fTitle').value=v?v.title:'';
+  document.getElementById('fType').value=v?v.type:'short';
+  document.getElementById('fDate').value=v?v.date:todayStr();
+  document.getElementById('fNotes').value=v?v.notes:'';
+  document.getElementById('fLink').value=v?v.link:'';
+  document.getElementById('fViews').value=v?v.views:'';
+  document.getElementById('fLikes').value=v?v.likes:'';
+  document.getElementById('btnDel').style.display=v?'block':'none';
+  document.getElementById('fSummary').textContent=(v&&v.summary)?v.summary:'尚未產生';
+  modalStage=v?v.stage:0;renderStagebar();
+  document.getElementById('overlay').classList.add('show');
+}
+function renderStagebar(){
+  document.getElementById('stagebar').innerHTML=STAGES.map((s,i)=>
+    `<div class="p ${i<modalStage?'on':''} ${i===modalStage?'cur':''}" style="cursor:pointer" onclick="modalStage=${i};renderStagebar()">${s}</div>`).join('');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('show')}
+function saveVideo(){
+  const data={title:document.getElementById('fTitle').value.trim()||'未命名影片',
+    type:document.getElementById('fType').value,
+    date:document.getElementById('fDate').value||todayStr(),
+    notes:document.getElementById('fNotes').value,
+    link:document.getElementById('fLink').value.trim(),
+    views:document.getElementById('fViews').value,
+    likes:document.getElementById('fLikes').value,
+    stage:modalStage};
+  if(editId){Object.assign(videos.find(x=>x.id===editId),data)}
+  else{videos.push({id:uid(),...data})}
+  save();closeModal();renderAll();
+}
+function delVideo(){if(confirm('確定刪除?')){videos=videos.filter(x=>x.id!==editId);save();closeModal();renderAll()}}
+// ── 用影片內容強化匹配:AI 看片產出描述,取代只比標題 ──
+async function gemVideoText(link,prompt){
+  const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/${gemModel()}:generateContent?key=${k}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{file_data:{file_uri:link}},{text:prompt}]}]})
+  });
+  const j=await r.json();
+  return (((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+}
+function caMsg(html){
+  const el=document.getElementById('caStatus');
+  if(el){el.style.display=html?'block':'none';el.innerHTML=html}
+}
+async function contentAnalyze(){
+  if(!ytCfg.gemKey){caMsg('⚠️ 要先在右上 ⚙️ 填 <b>Gemini API 金鑰</b> 才能做影片內容分析(aistudio.google.com/app/apikey 免費產生)');return}
+  let privC=null;try{privC=JSON.parse(localStorage.getItem(KEY_PRIV))}catch(e){}
+  const unpub=videos.filter(v=>v.stage<5);
+  const noLink=unpub.filter(v=>!v.link).length;
+  const done=unpub.filter(v=>v.link&&v.summary).length;
+  const pItems=(privC&&privC.items)||[];
+  const pDone=pItems.filter(p=>p.summary).length;
+  const targets=[];
+  unpub.filter(v=>v.link&&!v.summary).forEach(v=>targets.push({link:v.link,set:t=>{v.summary=t},label:v.title}));
+  if(!targets.length){
+    caMsg(`ℹ️ 這裡只能自動分析「有公開 YouTube 連結」的未發布影片(YouTube 限制:AI 無法透過網址觀看未列出/私人影片)。狀況:<br>
+・未發布影片 ${unpub.length} 支:${noLink} 支沒有連結、${done} 支已分析過<br>
+・未公開影片 ${pItems.length} 支(${pDone} 支已分析):請打開該影片的編輯視窗,用「<b>📁 上傳本地影片分析</b>」直接把影片檔給 AI 看<br>
+💡 還沒上傳的企劃,把大綱寫進「腳本/備註」也會納入語意匹配。`);
+    return;
+  }
+  const batch=targets.slice(0,5);
+  let ok=0,firstErr='';
+  for(let i=0;i<batch.length;i++){
+    caMsg(`🧠 AI 觀看影片中 (${i+1}/${batch.length}):${esc(batch[i].label)}…<br><span class="sub">每支約 10-30 秒,請勿關閉頁面</span>`);
+    try{
+      const d=await gemVideoText(batch[i].link,'用繁體中文描述這支影片的主題、內容重點與關鍵詞,80字以內,直接輸出描述不要開場白。');
+      if(d){batch[i].set(d);ok++}
+    }catch(e){if(!firstErr)firstErr=/permission/i.test(e.message)?'該影片不是公開的——YouTube 只讓 AI 透過網址看公開影片,未列出/私人請改用編輯視窗的「📁 上傳本地影片分析」':e.message}
+  }
+  save();
+  if(privC)localStorage.setItem(KEY_PRIV,JSON.stringify(privC));
+  const finalMsg=`✅ 內容分析完成 ${ok}/${batch.length} 支${targets.length>5?`,還剩 ${targets.length-5} 支(再按一次繼續)`:''}${firstErr?`<br>❌ 部分失敗:${esc(firstErr)}`:''}<br>潛力排行已改用實際影片內容匹配。`;
+  await renderTopics(false);
+  caMsg(finalMsg);
+}
+// ── AI 影片內容摘要(Gemini 直接看 YouTube 影片)──
+async function summarizeVideo(btn){
+  const link=document.getElementById('fLink').value.trim();
+  if(!link){toast('請先填 YouTube 連結');return}
+  if(!ytCfg.gemKey){toast('請先在 ⚙️ 填 Gemini API 金鑰');return}
+  if(btn)btn.disabled=true;
+  document.getElementById('fSummary').textContent='🧠 AI 觀看影片中…約10~30秒';
+  try{
+    const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/${gemModel()}:generateContent?key=${k}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[
+        {file_data:{file_uri:link}},
+        {text:'你是YouTube籃球頻道的內容助理。請用繁體中文分析這支影片:\n1. 內容重點(3-5條)\n2. 最大亮點時刻(含大約時間點)\n3. 標題建議2個\n4. 一句話總結\n保持精簡。'}
+      ]}]})
+    });
+    const j=await r.json();
+    const txt=(((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+    if(!txt)throw new Error('模型沒有回傳內容');
+    document.getElementById('fSummary').textContent=txt;
+    if(editId){const v=videos.find(x=>x.id===editId);if(v){v.summary=txt;save()}}
+    toast('摘要完成 ✅');
+  }catch(e){
+    document.getElementById('fSummary').textContent='尚未產生';
+    toast('❌ '+(/permission/i.test(e.message)?'這支影片不是公開的,YouTube 只讓 AI 看公開影片——請改用「📁 上傳本地影片分析」':e.message));
+  }finally{if(btn)btn.disabled=false}
+}
+// ── 本地影片分析(草稿/私人/未列出:直接把影片檔上傳給 Gemini 看)──
+async function analyzeLocalVideo(inp){
+  const f=inp.files[0];inp.value='';
+  if(!f)return;
+  if(!ytCfg.gemKey){toast('請先在 ⚙️ 填 Gemini API 金鑰');return}
+  if(f.size>300*1024*1024){toast('❌ 檔案超過 300MB,請先剪短或壓縮');return}
+  const box=document.getElementById('fSummary');
+  try{
+    box.textContent=`⬆️ 上傳「${f.name}」中…(${(f.size/1048576).toFixed(0)}MB,依網速需要一點時間)`;
+    const st=await gemFetch(k=>`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${k}`,{
+      method:'POST',
+      headers:{'X-Goog-Upload-Protocol':'resumable','X-Goog-Upload-Command':'start',
+        'X-Goog-Upload-Header-Content-Length':String(f.size),
+        'X-Goog-Upload-Header-Content-Type':f.type||'video/mp4',
+        'Content-Type':'application/json'},
+      body:JSON.stringify({file:{display_name:f.name}})
+    });
+    const upUrl=st.headers.get('x-goog-upload-url');
+    if(!upUrl)throw new Error('瀏覽器拿不到上傳網址,請確認金鑰正確後再試');
+    const up=await fetch(upUrl,{method:'POST',
+      headers:{'X-Goog-Upload-Command':'upload, finalize','X-Goog-Upload-Offset':'0'},
+      body:f});
+    if(!up.ok)throw new Error('上傳失敗 HTTP '+up.status);
+    let info=(await up.json()).file;
+    box.textContent='⏳ Google 處理影片中…(1-2分鐘)';
+    let n=0;
+    while(info&&info.state==='PROCESSING'&&n<80){
+      await new Promise(r=>setTimeout(r,3000));n++;
+      const g=await fetch(`https://generativelanguage.googleapis.com/v1beta/${info.name}?key=${lastGemKey}`);
+      info=await g.json();
+    }
+    if(!info||info.state!=='ACTIVE')throw new Error('影片處理未完成:'+((info&&info.state)||'未知'));
+    box.textContent='🧠 AI 觀看影片中…';
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gemModel()}:generateContent?key=${lastGemKey}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[
+        {file_data:{file_uri:info.uri,mime_type:f.type||'video/mp4'}},
+        {text:'你是YouTube籃球頻道的內容助理。請用繁體中文分析這支影片:\n1. 內容重點(3-5條)\n2. 最大亮點時刻(含大約時間點)\n3. 標題建議2個\n4. 一句話總結\n保持精簡。'}
+      ]}]})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error&&e.error.message?e.error.message:'HTTP '+r.status)}
+    const j=await r.json();
+    const txt=(((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+    if(!txt)throw new Error('模型沒有回傳內容');
+    box.textContent=txt;
+    if(editId){const v=videos.find(x=>x.id===editId);if(v){v.summary=txt;save()}}
+    toast('本地影片分析完成 ✅ 已納入潛力匹配');
+  }catch(e){box.textContent='尚未產生';toast('❌ '+e.message)}
+}
+function advance(id){
+  const v=videos.find(x=>x.id===id);
+  if(v&&v.stage<5){v.stage++;save();renderAll();if(v.stage===5)toast(`「${v.title}」已發布 🎉`)}
+}
+
+// ── 視圖 ──
+function setView(v){
+  curView=v;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  ['todayV','board','ideas','topics','trend','review','list'].forEach(k=>{
+    document.getElementById('v_'+k).style.display=k===v?'block':'none'});
+  renderAll();
+}
+function renderAll(){
+  renderStats();
+  if(curView==='todayV')renderToday();
+  if(curView==='board')renderBoard();
+  if(curView==='ideas')renderIdeas();
+  if(curView==='topics')renderTopics(false);
+  if(curView==='trend')renderTrend();
+  if(curView==='review')renderReview();
+  if(curView==='list')renderList();
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setView(t.dataset.view)));
+
+// ── YouTube 同步 ──
+const KEY_YT='ysyd_yt', KEY_CH='ysyd_chstats';
+let ytCfg={key:'',handle:''};
+function loadYt(){try{ytCfg=JSON.parse(localStorage.getItem(KEY_YT))||{key:'',handle:''}}catch(e){ytCfg={key:'',handle:''}}}
+function openSettings(){
+  document.getElementById('fHandle').value=ytCfg.handle||'';
+  document.getElementById('fKey').value=ytCfg.key||'';
+  document.getElementById('fClientId').value=ytCfg.clientId||'';
+  document.getElementById('fGemKey').value=ytCfg.gemKey||'';
+  document.getElementById('fGemModel').value=ytCfg.gemModel||'gemini-2.5-flash';
+  document.getElementById('fTopicKw').value=ytCfg.topicKw||'';
+  document.getElementById('ytOverlay').classList.add('show');
+}
+function closeSettings(){document.getElementById('ytOverlay').classList.remove('show')}
+function saveSettings(){
+  ytCfg={handle:document.getElementById('fHandle').value.trim(),key:document.getElementById('fKey').value.trim(),clientId:document.getElementById('fClientId').value.trim(),gemKey:document.getElementById('fGemKey').value.trim(),gemModel:document.getElementById('fGemModel').value,topicKw:document.getElementById('fTopicKw').value.trim()};
+  localStorage.setItem(KEY_YT,JSON.stringify(ytCfg));
+  closeSettings();syncYT(false);
+}
+// ── OAuth:讀取私人/未列出影片 ──
+const KEY_PRIV='ysyd_priv';
+let ytToken=null,tokenClient=null;
+const KEY_TOK='ysyd_tok';
+let silentMode=false;
+function loadTok(){
+  try{const t=JSON.parse(localStorage.getItem(KEY_TOK));
+    if(t&&t.exp>Date.now()+60000)ytToken=t.t}catch(e){}
+}
+function getTokenClient(){
+  if(tokenClient)return tokenClient;
+  if(!window.google||!google.accounts||!ytCfg.clientId)return null;
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:ytCfg.clientId,
+    scope:'https://www.googleapis.com/auth/youtube.readonly',
+    callback:t=>{if(t.access_token){
+      ytToken=t.access_token;
+      localStorage.setItem(KEY_TOK,JSON.stringify({t:t.access_token,exp:Date.now()+((+t.expires_in||3600)-60)*1000}));
+      toast('Google 已連線 ✅');closeSettings();syncPrivate();
+    }},
+    error_callback:e=>{if(!silentMode)toast('登入未完成'+(e&&e.type?':'+e.type:''))}
+  });
+  return tokenClient;
+}
+function oauthLogin(){
+  if(!ytCfg.clientId){ytCfg.clientId=document.getElementById('fClientId').value.trim();if(!ytCfg.clientId){toast('請先填 OAuth 用戶端 ID');return}}
+  if(location.protocol==='file:'){toast('OAuth 需透過「啟動儀表板.bat」開啟(http://localhost:8787)');return}
+  const tc=getTokenClient();
+  if(!tc){toast('Google 登入元件還在載入,幾秒後再按一次');return}
+  silentMode=false;
+  tc.requestAccessToken();
+}
+// 已授權過的話,開頁時靜默續登,不用再按
+function trySilentLogin(){
+  if(ytToken||!ytCfg.clientId||location.protocol==='file:')return;
+  let n=0;const tm=setInterval(()=>{
+    n++;
+    if(window.google&&google.accounts){clearInterval(tm);silentMode=true;const tc=getTokenClient();if(tc)tc.requestAccessToken({prompt:''})}
+    else if(n>20)clearInterval(tm);
+  },500);
+}
+async function ytAuthFetch(url){
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+ytToken}});
+  if(!r.ok){
+    if(r.status===401){ytToken=null;localStorage.removeItem(KEY_TOK)}
+    const e=await r.json().catch(()=>({}));throw new Error(e.error&&e.error.message?e.error.message:'HTTP '+r.status)}
+  return r.json();
+}
+// ── 備份匯出/匯入(換瀏覽器或重灌免重填)──
+function exportData(){
+  const data={};
+  ['ysyd_videos','ysyd_ideas','ysyd_yt','ysyd_chstats','ysyd_trends','ysyd_priv','ysyd_lastsync'].forEach(k=>{const v=localStorage.getItem(k);if(v!=null)data[k]=v});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+  a.download='球是沅的-儀表板備份.json';a.click();
+  toast('已匯出備份 ⬇️');
+}
+function importData(inp){
+  const f=inp.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const data=JSON.parse(rd.result);
+    Object.keys(data).forEach(k=>{if(k.indexOf('ysyd_')===0)localStorage.setItem(k,data[k])});
+    load();loadYt();renderAll();renderChLine();
+    toast('匯入完成 ✅');
+  }catch(e){toast('❌ 檔案格式錯誤')}};
+  rd.readAsText(f);
+}
+async function syncPrivate(){
+  if(!ytToken){toast('請先按 ⚙️ 裡的「登入 Google」');return}
+  try{
+    toast('讀取未公開影片中…');
+    const ch=await ytAuthFetch('https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true');
+    if(!ch.items||!ch.items.length)throw new Error('讀不到頻道,請用頻道所屬帳號登入');
+    const pl=ch.items[0].contentDetails.relatedPlaylists.uploads;
+    let items=[],page='';
+    for(let i=0;i<4;i++){
+      const r=await ytAuthFetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${pl}&maxResults=50${page?'&pageToken='+page:''}`);
+      items.push(...(r.items||[]));page=r.nextPageToken;if(!page)break;
+    }
+    const priv=[];
+    for(let i=0;i<items.length;i+=50){
+      const ids=items.slice(i,i+50).map(x=>x.contentDetails.videoId).join(',');
+      const vs=await ytAuthFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,status,contentDetails&id=${ids}`);
+      (vs.items||[]).forEach(v=>{
+        if(v.status.privacyStatus!=='public')priv.push({id:v.id,title:v.snippet.title,desc:(v.snippet.description||'').slice(0,200),privacy:v.status.privacyStatus,dur:parseDur(v.contentDetails.duration)});
+      });
+    }
+    localStorage.setItem(KEY_PRIV,JSON.stringify({at:Date.now(),items:priv}));
+    toast(`找到 ${priv.length} 支未公開影片,已納入潛力分析 ✅`);
+    if(curView==='topics')renderTopics(false);
+  }catch(e){toast('❌ '+e.message)}
+}
+function parseDur(s){const m=String(s||'').match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)||[];return(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0)}
+async function ytFetch(url){
+  const r=await fetch(url);
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error&&e.error.message?e.error.message:'HTTP '+r.status)}
+  return r.json();
+}
+async function syncYT(silent){
+  if(!ytCfg.key||!ytCfg.handle){if(!silent){openSettings()}return}
+  try{
+    if(!silent)toast('同步中…');
+    const h='@'+ytCfg.handle.replace(/^@/,'');
+    const ch=await ytFetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails,statistics&forHandle=${encodeURIComponent(h)}&key=${ytCfg.key}`);
+    if(!ch.items||!ch.items.length)throw new Error('找不到頻道,請確認代號(YouTube頻道頁網址裡的 @xxx)');
+    const c=ch.items[0];
+    localStorage.setItem(KEY_CH,JSON.stringify({subs:c.statistics.subscriberCount,views:c.statistics.viewCount,at:Date.now()}));
+    const pl=c.contentDetails.relatedPlaylists.uploads;
+    const its=await ytFetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${pl}&maxResults=50&key=${ytCfg.key}`);
+    const ids=its.items.map(i=>i.contentDetails.videoId).join(',');
+    if(!ids)throw new Error('頻道還沒有影片');
+    const vs=await ytFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${ids}&key=${ytCfg.key}`);
+    let created=0,updated=0;
+    vs.items.forEach(v=>{
+      const type=parseDur(v.contentDetails.duration)<=180?'short':'long';
+      const d=new Date(v.snippet.publishedAt);d.setHours(0,0,0,0);const ds=fmt(d);
+      let ex=videos.find(x=>x.ytId===v.id);
+      if(!ex){
+        ex=videos.find(x=>!x.ytId&&x.date===ds&&x.type===type);
+        if(ex){ex.ytId=v.id;ex.title=v.snippet.title}
+      }
+      if(ex){ex.stage=5;ex.date=ds;ex.views=v.statistics.viewCount||'';ex.likes=v.statistics.likeCount||'';ex.link='https://youtu.be/'+v.id;updated++}
+      else{videos.push({id:uid(),ytId:v.id,type,date:ds,title:v.snippet.title,stage:5,notes:'',link:'https://youtu.be/'+v.id,views:v.statistics.viewCount||'',likes:v.statistics.likeCount||''});created++}
+    });
+    localStorage.setItem('ysyd_lastsync',String(Date.now()));
+    save();renderAll();renderChLine();
+    toast(`YT 同步完成:新增 ${created}、更新 ${updated} ✅`);
+  }catch(e){toast('❌ 同步失敗:'+e.message)}
+}
+// ── 熱門話題與潛力匹配 ──
+const KEY_TR='ysyd_trends';
+const DEFAULT_KW='台灣啦啦隊,韓國啦啦隊,中職啦啦隊,樂天女孩,啦啦隊應援,李多慧,安芝儇,林襄,峮峮,李雅英,河智媛,邊荷律';
+function topicKws(){
+  return (ytCfg.topicKw||DEFAULT_KW).split(/[,,、]/).map(s=>s.trim()).filter(Boolean).slice(0,12);
+}
+function sortKeyT(i){return i.at?+new Date(i.at):(i.fetchedAt||0)}
+function tAgo(iso){
+  if(!iso)return '';
+  const m=Math.floor((Date.now()-new Date(iso))/60000);
+  if(m<1)return '剛剛';
+  if(m<60)return m+'分鐘前';
+  if(m<1440){const h=Math.floor(m/60),mm=m%60;return h+'小時'+(mm?mm+'分':'')+'前'}
+  const d=Math.floor(m/1440);
+  if(d<=7)return d+'天前';
+  const dt=new Date(iso);return (dt.getMonth()+1)+'/'+dt.getDate();
+}
+function todayLocal(){const t=new Date();return t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2)}
+// 跨平台話題:Gemini + Google 搜尋抓 FB/IG/Threads/新聞 熱門
+async function crossTopics(kws){
+  if(!hasAI())return [];
+  const prompt=`用搜尋找出最近7天在 Facebook、Instagram、Threads、新聞網站上關於「${kws.join('、')}」的熱門話題、爆紅貼文、個人動態或活動(包含成員的IG發文、見面會、代言、綜藝節目、個人爭議或亮點表現)。只輸出 JSON 陣列,格式:[{"topic":"話題標題(含人名)","platform":"FB / IG / Threads / 新聞 擇一","why":"為何熱門,20字內","date":"內容發布日期 YYYY-MM-DD,從來源判斷,不確定留空","url":"直接複製你搜尋來源的完整網址(instagram.com/threads.net/新聞頁面連結),這個欄位非常重要,必須從真實來源複製,不可編造"}]。最多15個,依熱度排序,不要輸出 JSON 以外的文字。`;
+  try{
+    const txt=await aiText(prompt,true);
+    const m=txt.match(/\[[\s\S]*\]/);
+    if(!m)return [];
+    return JSON.parse(m[0]).slice(0,15).filter(o=>o&&o.topic).map(o=>({
+      id:uid(),title:o.topic+(o.why?'——'+o.why:''),ch:o.platform||'網路',tags:[],views:0,sport:false,
+      at:(o.date&&/^\d{4}-\d{2}-\d{2}/.test(String(o.date)))?String(o.date).slice(0,10)+'T12:00:00':null,
+      fetchedAt:Date.now(),
+      src:(o.platform||'網路').replace(/\s/g,''),
+      link:(o.url&&/^https?:\/\/[^ ]+$/.test(o.url.trim())&&!/vertexaisearch|grounding-api/.test(o.url))?o.url.trim():'https://www.google.com/search?q='+encodeURIComponent(o.topic)
+    }));
+  }catch(e){return []}
+}
+// IG/Threads 逐一關鍵詞精準搜尋(深搜用,一次一個詞)
+async function crossOne(kw){
+  try{
+    const txt=await aiText(`用搜尋找出最近7天 Instagram 和 Threads 上關於「${kw}」的熱門貼文與個人動態(IG發文、限動話題、Threads討論串)。只輸出 JSON 陣列:[{"topic":"具體貼文/動態描述(含人名)","platform":"IG 或 Threads","why":"為何熱門,20字內","date":"發布日期 YYYY-MM-DD,不確定留空","url":"貼文完整網址(instagram.com/threads.net),必須從搜尋來源複製,找不到留空"}]。最多5個,依熱度排序,不要輸出 JSON 以外的文字。`,true);
+    const m=txt.match(/\[[\s\S]*\]/);if(!m)return [];
+    return JSON.parse(m[0]).filter(o=>o&&o.topic).slice(0,5).map(o=>({
+      id:uid(),title:o.topic+(o.why?'——'+o.why:''),ch:o.platform||'IG',tags:[],views:0,sport:false,
+      at:(o.date&&/^\d{4}-\d{2}-\d{2}/.test(String(o.date)))?String(o.date).slice(0,10)+'T12:00:00':null,
+      fetchedAt:Date.now(),src:(o.platform||'IG').replace(/\s/g,''),foundBy:kw,
+      link:(o.url&&/^https?:\/\/[^ ]+$/.test(o.url.trim())&&!/vertexaisearch|grounding-api/.test(o.url))?o.url.trim():'https://www.google.com/search?q='+encodeURIComponent(kw+' '+o.topic)
+    }));
+  }catch(e){return []}
+}
+async function fetchTrends(force){
+  if(!ytCfg.key){toast('請先按 ⚙️ 設定 API 金鑰');openSettings();return null}
+  let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_TR))}catch(e){}
+  const kws=topicKws();
+  if(!force&&cache&&Date.now()-cache.at<3600e3&&cache.kw===kws.join(','))return cache.items;
+  // 1) YouTube:主題關鍵字搜近14天熱門(4個關鍵字併一次 OR 查詢,省配額)
+  const after=new Date(Date.now()-14*864e5).toISOString();
+  const seen=new Set(),ids=[];
+  const groups=[];for(let i=0;i<kws.length;i+=4)groups.push(kws.slice(i,i+4).join('|'));
+  for(const g of groups){
+    try{
+      const s=await ytFetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&regionCode=TW&order=viewCount&publishedAfter=${encodeURIComponent(after)}&maxResults=20&q=${encodeURIComponent(g)}&key=${ytCfg.key}`);
+      (s.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
+    }catch(e){}
+  }
+  const items=[];
+  for(let i=0;i<ids.length;i+=50){
+    const vs=await ytFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids.slice(i,i+50).join(',')}&key=${ytCfg.key}`);
+    (vs.items||[]).forEach(v=>items.push({id:v.id,title:v.snippet.title,ch:v.snippet.channelTitle,tags:v.snippet.tags||[],views:+v.statistics.viewCount||0,sport:false,src:'YT',at:v.snippet.publishedAt,link:'https://youtu.be/'+v.id}));
+  }
+  items.sort((a,b)=>b.views-a.views);
+  // 2) FB/IG/Threads/新聞:Gemini 搜尋
+  const cross=await crossTopics(kws);
+  const all=[...cross,...items];
+  // 保留 Chrome 實查注入的項目(標 ext,7天內),不被重抓洗掉
+  const prevExt=((cache&&cache.items)||[]).filter(i=>i.ext&&Date.now()-(i.fetchedAt||0)<7*864e5);
+  const seenT2=new Set(all.map(i=>i.title));
+  prevExt.forEach(i=>{if(!seenT2.has(i.title))all.push(i)});
+  if(!all.length)throw new Error('找不到相關內容,試著調整 ⚙️ 裡的話題關鍵字');
+  localStorage.setItem(KEY_TR,JSON.stringify({at:Date.now(),kw:kws.join(','),items:all}));
+  return all;
+}
+function grams(s){
+  s=String(s||'').toLowerCase().replace(/[^一-鿿豈-﫿a-z0-9]/g,'');
+  const g=new Set();
+  for(let i=0;i<s.length-1;i++)g.add(s.slice(i,i+2));
+  return g;
+}
+function matchScore(text,tr){
+  const g=grams(text);
+  const hay=(tr.title+' '+tr.tags.join(' ')).toLowerCase();
+  const hits=[];g.forEach(x=>{if(hay.includes(x))hits.push(x)});
+  return hits;
+}
+// 把命中的2字詞接回完整詞(三分+分球→三分球)
+function mergeHits(text,hitArr){
+  const clean=String(text||'').toLowerCase().replace(/[^一-鿿豈-﫿a-z0-9]/g,'');
+  const set=new Set(hitArr);const out=new Set();let i=0;
+  while(i<clean.length-1){
+    if(set.has(clean.slice(i,i+2))){
+      let j=i+2;
+      while(j<clean.length&&set.has(clean.slice(j-1,j+1)))j++;
+      out.add(clean.slice(i,j));i=j;
+    }else i++;
+  }
+  return [...out];
+}
+// ── 中英文正確匹配:英文整詞、中文最長共同詞(取代舊的碎片比對)──
+const STOP_EN=new Set(['the','and','for','with','this','that','you','your','are','was','were','how','what','who','why','not','but','can','all','one','two','new','out','off','from','has','have','had','his','her','its','our','will','would','when','where','which','video','videos','shorts','short','youtube','official','mv','feat','ft','live','full','hd','vlog','ep','vs','top','best','part','in','on','at','to','of','it','is','my','we','me','no','so','do','if','or','an','be','by']);
+const STOP_ZH='的一了是我你他她它們在有個就不也還要都很嗎啊吧呢喔欸這那與和及或但被把讓給對於之其';
+const GENERIC_ZH=new Set(['挑戰','教學','開箱','精華','直播','影片','爆笑','最新','今天','明天','分享','合作','世界','台灣','大家','我們','你們','時候','沒有','可以','什麼','怎麼','如果','因為','所以','真的','超級','第一','有趣','一起','推薦','必看','完整','系列','日常','紀錄','記錄','公開','發布','馬上','終於','原來','竟然','居然']);
+// 英文:切完整單詞,過濾停用詞
+function tokensEn(s){
+  return (String(s||'').toLowerCase().match(/[a-z][a-z0-9]*/g)||[])
+    .filter(w=>w.length>=2&&!STOP_EN.has(w));
+}
+// 中文:只留中文字,詞界用 | 隔開避免跨詞誤配
+function cjkSeq(s){
+  let out='';
+  for(const c of String(s||'')){
+    const cp=c.codePointAt(0);
+    out+=(cp>=0x4e00&&cp<=0x9fff)?c:'|';
+  }
+  return out.replace(/\|+/g,'|');
+}
+// 找兩段中文所有「最長共同片段」(≥2字)
+function commonCjk(a,b){
+  const res=new Set();
+  for(let i=0;i<a.length;i++){
+    if(a[i]==='|')continue;
+    let bestLen=0,best='';
+    for(let j=0;j<b.length;j++){
+      if(b[j]!==a[i])continue;
+      let k=0;
+      while(i+k<a.length&&j+k<b.length&&a[i+k]===b[j+k]&&a[i+k]!=='|')k++;
+      if(k>bestLen){bestLen=k;best=a.slice(i,i+k)}
+    }
+    if(bestLen>=2)res.add(best);
+  }
+  const arr=[...res].sort((x,y)=>y.length-x.length);
+  const out=[];
+  arr.forEach(s=>{if(!out.some(o=>o.includes(s)))out.push(s)});
+  return out;
+}
+// 過濾泛用詞、虛詞
+function zhMeaningful(s){
+  if(GENERIC_ZH.has(s))return false;
+  let sig=0;for(const c of s)if(STOP_ZH.indexOf(c)<0)sig++;
+  return sig>=2;
+}
+// 主匹配:{score, en:[命中英文詞], zh:[共同中文詞]}
+// 英文整詞每個2分,中文詞=字數(越長越可信分越高)
+function analyzeMatch(text,tr){
+  const hay=tr.title+' '+tr.tags.join(' ');
+  const tw=new Set(tokensEn(hay));
+  const en=[...new Set(tokensEn(text))].filter(w=>tw.has(w));
+  const zh=commonCjk(cjkSeq(text),cjkSeq(hay)).filter(zhMeaningful);
+  const score=en.length*2+zh.reduce((s,w)=>s+w.length,0);
+  return {score,en,zh};
+}
+// ── Gemini 多金鑰輪替:429/額度滿自動換下一把 ──
+let gemIdx=0,lastGemKey='';
+function gemKeys(){return String(ytCfg.gemKey||'').split(/[,\s]+/).filter(Boolean)}
+// 節流:免費層每分鐘20次,全域排隊+依金鑰數自動調整間隔
+let gemLast=0,gemQueue=Promise.resolve();
+function gemGap(){return Math.max(1200,3300/Math.max(1,gemKeys().length))}
+function gemThrottle(){
+  const run=gemQueue.then(async()=>{
+    const w=gemLast+gemGap()-Date.now();
+    if(w>0)await new Promise(r=>setTimeout(r,w));
+    gemLast=Date.now();
+  });
+  gemQueue=run.catch(()=>{});
+  return run;
+}
+async function gemFetch(makeUrl,opts){
+  const keys=gemKeys();
+  if(!keys.length)throw new Error('請先在 ⚙️ 填 Gemini 金鑰');
+  let lastErr='';
+  for(let pass=0;pass<3;pass++){
+    for(let i=0;i<keys.length;i++){
+      const k=keys[(gemIdx+i)%keys.length];
+      await gemThrottle();
+      const r=await fetch(makeUrl(k),opts);
+      if(r.ok){gemIdx=(gemIdx+i)%keys.length;lastGemKey=k;return r}
+      const e=await r.json().catch(()=>({}));
+      const msg=e.error&&e.error.message?e.error.message:'HTTP '+r.status;
+      if(r.status===429||r.status===503||/quota|exhaust|rate ?limit|overload|high demand|unavailable/i.test(msg)){lastErr=msg;continue}
+      throw new Error(msg);
+    }
+    if(pass<2){
+      // 全部金鑰限流 → 照 API 建議的秒數等待後自動重試
+      const m=lastErr.match(/retry in ([\d.]+)s/i);
+      const wait=Math.min(30,(m?parseFloat(m[1]):10)+2);
+      await new Promise(r=>setTimeout(r,wait*1000));
+    }
+  }
+  throw new Error('Gemini 重試多次仍限流('+keys.length+' 把金鑰):'+lastErr);
+}
+function hasAI(){return gemKeys().length>0}
+function gemModel(){return ytCfg.gemModel||'gemini-2.5-flash'}
+// 文字任務:Gemini 多金鑰輪替+主模型額度滿自動降級 flash-lite
+async function aiTextWith(model,prompt,useSearch){
+  const body={contents:[{parts:[{text:prompt}]}]};
+  if(useSearch)body.tools=[{google_search:{}}];
+  const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${k}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json();
+  const t=(((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+  if(!t)throw new Error('Gemini 沒有回傳內容');
+  return t;
+}
+async function aiText(prompt,useSearch){
+  if(!gemKeys().length)throw new Error('請先在 ⚙️ 填 Gemini 金鑰');
+  try{return await aiTextWith(gemModel(),prompt,useSearch)}
+  catch(e){
+    if(gemModel()!=='gemini-2.5-flash-lite'&&/限流|quota|exhaust|rate|overload|demand|unavailable/i.test(e.message)){
+      toast('主模型額度滿,自動改用 flash-lite 繼續');
+      return await aiTextWith('gemini-2.5-flash-lite',prompt,useSearch);
+    }
+    throw e;
+  }
+}
+// ── Perplexity 深挖(用你的訂閱開網頁版,預填提問)──
+function pplx(q){window.open('https://www.perplexity.ai/search?q='+encodeURIComponent(q),'_blank')}
+// 深挖:開啟 Perplexity 網頁版並自動帶入問題(用你的訂閱)
+async function pplxAsk(q,elId){
+  pplx(q);
+}
+function pplxWhy(idx){
+  const s=lastScored[idx];if(!s)return;
+  pplxAsk(`「${s.label}」:這是台灣啦啦隊主題 YouTube 頻道的影片題材。最近有哪些相關的熱門話題與事件?給我 3 個短影片切入角度與吸睛標題建議。用繁體中文精簡回答。`,'pplxbox_'+idx);
+}
+function pplxTrend(id){
+  try{
+    const c=JSON.parse(localStorage.getItem(KEY_TR));
+    const t=(c.items||[]).find(x=>x.id===id);
+    if(t)pplxAsk(`「${t.title}」這個話題最近為什麼熱門?台灣啦啦隊主題的 YouTube 頻道可以怎麼蹭這個話題?給我短影片企劃與標題建議。用繁體中文精簡回答。`,'pplxbox_t_'+id);
+  }catch(e){}
+}
+// ── Gemini 語意匹配:向量嵌入+餘弦相似度 ──
+const KEY_EMB='ysyd_emb2';
+function embKey(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return 'e'+h.toString(36)}
+function loadEmbCache(){try{return JSON.parse(localStorage.getItem(KEY_EMB))||{}}catch(e){return{}}}
+function saveEmbCache(c){
+  const ks=Object.keys(c);
+  if(ks.length>160){ks.sort((a,b)=>(c[a].at||0)-(c[b].at||0));ks.slice(0,ks.length-160).forEach(k=>delete c[k])}
+  try{localStorage.setItem(KEY_EMB,JSON.stringify(c))}catch(e){localStorage.removeItem(KEY_EMB)}
+}
+async function embedTexts(texts){
+  const cache=loadEmbCache();
+  const missing=[...new Set(texts.filter(t=>!cache[embKey(t)]))];
+  for(let i=0;i<missing.length;i+=100){
+    const chunk=missing.slice(i,i+100);
+    const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${k}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({requests:chunk.map(t=>({model:'models/gemini-embedding-001',content:{parts:[{text:t}]},outputDimensionality:256}))})
+    });
+    const j=await r.json();
+    (j.embeddings||[]).forEach((e,k)=>{cache[embKey(chunk[k])]={v:e.values.map(x=>Math.round(x*1000)/1000),at:Date.now()}});
+  }
+  saveEmbCache(cache);
+  return texts.map(t=>cache[embKey(t)]&&cache[embKey(t)].v);
+}
+function cosSim(a,b){
+  if(!a||!b)return 0;
+  let s=0,na=0,nb=0;
+  for(let i=0;i<a.length;i++){s+=a[i]*b[i];na+=a[i]*a[i];nb+=b[i]*b[i]}
+  return s/(Math.sqrt(na*nb)||1);
+}
+let lastScored=[],lastSemantic=false;
+function toggleWhy(idx){
+  const el=document.getElementById('why_'+idx);
+  if(!el)return;
+  if(el.style.display==='none'){
+    const s=lastScored[idx];if(!s)return;
+    const kws=[...new Set(s.best.reduce((a,b)=>a.concat(b.m.zh,b.m.en),[]))];
+    let h=`<div style="margin:8px 0 6px"><b>🔑 命中關鍵詞:</b> ${kws.map(k=>`<span class="chip warn">${esc(k)}</span>`).join(' ')}</div>
+      <b>📺 相關熱門影片(${s.best.length} 支):</b>`;
+    s.best.forEach(b=>{
+      const words=[...b.m.zh,...b.m.en];
+      const simTxt=b.sim!=null?`🤖 語意相似度 <b>${(b.sim*100).toFixed(0)}%</b> · `:'';
+      const wordTxt=words.length?`重疊詞「${words.map(esc).join('」「')}」`:'(用詞不同但主題相近)';
+      h+=`<div style="margin:5px 0;padding:7px 9px;background:var(--card2);border-radius:8px;border:1px solid var(--border)">
+        <span class="chip ${b.t.src==='YT'?'short':'long'}">${esc(b.t.src||'YT')}</span> <a href="${esc(b.t.link||('https://youtu.be/'+b.t.id))}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:600">${esc(b.t.title)}</a><br>
+        <span class="sub">${esc(b.t.ch)}${b.t.views?` · ${b.t.views.toLocaleString()} 次觀看`:''} · ${simTxt}${wordTxt} → <b>貢獻 +${b.pts} 分</b></span>
+      </div>`;
+    });
+    h+=lastSemantic
+      ?`<div class="sub" style="margin-top:6px">💯 計分:AI 語意向量比對,主題相似度≥62%才列入;分數=(相似度−50%)×100,運動類×1.5,加總=潛力 ${s.score} 分。用詞重複但主題不同的(如遊戲實況)不會再誤配。</div>`
+      :`<div class="sub" style="margin-top:6px">💯 計分:關鍵詞模式(英文整詞2分、中文共同詞=字數、運動類×2)=潛力 ${s.score} 分。到 ⚙️ 填 Gemini 金鑰可升級為 AI 語意匹配,避免詞語重複造成的誤配。</div>`;
+    el.innerHTML=h;el.style.display='block';
+  }else el.style.display='none';
+}
+async function renderTopics(force){
+  const el=document.getElementById('v_topics');
+  if(!ytCfg.key){el.innerHTML='<div class="empty">先按右上 ⚙️ 設定 YouTube API 金鑰,就能抓最新熱門話題 🔥</div>';return}
+  el.innerHTML='<div class="empty">抓取最新話題中…</div>';
+  let tr;
+  try{tr=await fetchTrends(force)}catch(e){el.innerHTML=`<div class="empty">❌ 抓取失敗:${esc(e.message)}</div>`;return}
+  if(!tr)return;
+  // 候選:靈感 + 未發布影片 + OAuth 抓到的未公開影片
+  let priv=[];try{const p=JSON.parse(localStorage.getItem(KEY_PRIV));if(p)priv=p.items||[]}catch(e){}
+  const cands=[
+    ...ideas.map(i=>({kind:'idea',label:i.text,text:i.text,id:i.id})),
+    ...videos.filter(v=>v.stage<5).map(v=>({kind:'video',label:v.title,text:v.title+' '+(v.notes||'')+' '+(v.summary||''),id:v.id,stage:v.stage})),
+    ...priv.map(p=>({kind:'priv',label:p.title,text:p.title+' '+(p.desc||'')+' '+(p.summary||''),id:p.id,privacy:p.privacy}))
+  ];
+  let scored=null;lastSemantic=false;
+  // 優先:Gemini 語意匹配(主題相近才算,不受詞語表面重複影響)
+  if(ytCfg.gemKey){
+    try{
+      const cList=cands.slice(0,40),tList=tr.slice(0,30);
+      const cTexts=cList.map(c=>c.text.slice(0,200));
+      const tTexts=tList.map(t=>(t.title+' '+t.tags.slice(0,8).join(' ')).slice(0,200));
+      const embs=await embedTexts([...cTexts,...tTexts]);
+      const cE=embs.slice(0,cTexts.length),tE=embs.slice(cTexts.length);
+      scored=cList.map((c,ci)=>{
+        let total=0;const best=[];
+        tList.forEach((t,ti)=>{
+          const sim=cosSim(cE[ci],tE[ti]);
+          if(sim>=0.62){
+            const pts=Math.round((sim-0.5)*100*(t.sport?1.5:1));
+            total+=pts;
+            best.push({t,sim,pts,m:analyzeMatch(c.text,t)});
+          }
+        });
+        best.sort((a,b)=>b.pts-a.pts);
+        return {...c,score:total,best};
+      }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+      lastSemantic=true;
+    }catch(e){toast('語意匹配失敗,改用關鍵詞比對:'+e.message);scored=null}
+  }
+  // 備援:關鍵詞比對
+  if(!scored){
+    scored=cands.map(c=>{
+      let total=0;const best=[];
+      tr.forEach(t=>{const m=analyzeMatch(c.text,t);
+        if(m.score>=2){const pts=m.score*(t.sport?2:1);total+=pts;best.push({t,m,pts})}});
+      best.sort((a,b)=>b.pts-a.pts);
+      return {...c,score:total,best};
+    }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  }
+  lastScored=scored;
+
+  let html=`<div class="toolrow" style="margin-bottom:10px">
+    <div class="section-title" style="margin:0">🔥 ${esc(topicKws()[0])}熱門(YT/FB/IG/Threads)${lastSemantic?'<span class="chip long">🤖 AI 語意匹配</span>':'<span class="chip date">🔤 關鍵詞模式</span>'}</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn sm ghost" onclick="deepExplore()" title="從結果自動發現新關鍵詞,往下深挖一層">🕸️ 深度探索</button>
+      <button class="btn sm green" onclick="contentAnalyze()">🧠 用影片內容強化</button>
+      <button class="btn sm" onclick="renderTopics(true)">🔄 重新抓取</button>
+    </div></div>
+  <div id="caStatus" class="summarybox" style="display:none;margin:0 0 12px"></div>
+  <div id="deepBar" class="summarybox" style="display:none;margin:0 0 12px;line-height:1.9"></div>`;
+
+  if(scored.length){
+    html+=`<div class="section-title">⭐ 你的內容潛力排行(與熱門話題匹配)</div>`;
+    scored.slice(0,8).forEach((s,idx)=>{
+      const kindChip=s.kind==='idea'?'<span class="chip long">靈感</span>':s.kind==='priv'?`<span class="chip warn">🔒 ${s.privacy==='private'?'私人':'未列出'}</span>`:`<span class="chip short">未發布・${STAGES[s.stage]}</span>`;
+      const act=s.kind==='idea'?`<button class="btn sm green" onclick="ideaToVideo('${s.id}','short')">→ 排入製作</button>`
+        :s.kind==='priv'?`<a class="btn sm green" href="https://studio.youtube.com/video/${s.id}/edit" target="_blank" style="text-decoration:none">去 Studio 發布</a>`
+        :`<button class="btn sm" onclick="openModal('${s.id}')">查看</button>`;
+      html+=`<div class="idea" style="align-items:flex-start">
+        <div class="txt"><b>${idx+1}. ${esc(s.label)}</b>
+          ${kindChip}
+          <span class="chip warn">🔥 潛力 ${s.score}</span>
+          <button class="btn sm ghost" onclick="toggleWhy(${idx})">為何相關 ▾</button><br>
+          <span class="sub">相關熱門:${s.best.slice(0,3).map(b=>esc(b.t.title.slice(0,25))+(b.t.title.length>25?'…':'')).join('、')}</span>
+          <div id="why_${idx}" style="display:none"></div>
+          <div id="pplxbox_${idx}" class="summarybox" style="display:none;margin-top:6px"></div>
+        </div>
+        <div class="acts"><button class="btn sm ghost" onclick="pplxWhy(${idx})" title="用你的 Perplexity 訂閱深入研究">P 深挖</button>${act}</div>
+      </div>`;
+    });
+  }else{
+    html+=`<div class="summarybox" style="margin-bottom:10px">目前靈感庫/未發布影片和熱門話題沒有明顯重疊。看看下面的發燒清單,點「＋轉靈感」直接收進靈感庫。</div>`;
+  }
+
+  html+=`<div class="section-title">📺 跨平台熱門清單(依時間 新→舊)</div>`;
+  [...tr].sort((a,b)=>sortKeyT(b)-sortKeyT(a)).slice(0,30).forEach(t=>{
+    html+=`<div class="idea"><div class="txt"><span class="chip ${t.src==='YT'?'short':'long'}">${esc(t.src||'YT')}</span> ${esc(t.title)}${t.gen===2?' <span title="深度探索發現">🕸️</span>':''}<br>
+      <span class="sub">${esc(t.ch)}${t.views?` · ${t.views.toLocaleString()} 次觀看`:''}${t.at?` · ${tAgo(t.at)}`:(t.fetchedAt?` · ${tAgo(new Date(t.fetchedAt).toISOString())}發現`:'')}</span>
+      <div id="pplxbox_t_${t.id}" class="summarybox" style="display:none;margin-top:6px"></div></div>
+      <div class="acts">
+        <a class="btn sm ghost" href="${esc(t.link||('https://youtu.be/'+t.id))}" target="_blank" style="text-decoration:none">看</a>
+        <button class="btn sm ghost" onclick="pplxTrend('${t.id}')" title="用你的 Perplexity 訂閱深入研究">P 深挖</button>
+        <button class="btn sm" onclick="trendToIdea('${t.id}')">＋轉靈感</button>
+      </div></div>`;
+  });
+  el.innerHTML=html;
+  // 回到話題頁時還原動態關鍵詞列與最後進度
+  if(dynKws.length)renderDynChips();
+  // 手動重新抓取後,自動接著跑深度探索
+  if(force&&hasAI()&&!deepBusy)setTimeout(()=>deepExplore(),100);
+}
+function trendToIdea(tid){
+  try{
+    const cache=JSON.parse(localStorage.getItem(KEY_TR));
+    const t=cache.items.find(x=>x.id===tid);
+    if(t){ideas.push({id:uid(),text:'蹭話題:'+t.title,createdAt:todayStr()});save();toast('已收進靈感庫 💡')}
+  }catch(e){}
+}
+// ── 深度探索:從話題結果萃取新關鍵詞 → 二輪深搜 → 併入潛力匹配 ──
+let deepKws=[];
+function deepMsg(html){const el=document.getElementById('deepBar');if(el){el.style.display=html?'block':'none';el.innerHTML=html}}
+async function deepYT(kws){
+  if(!ytCfg.key)return [];
+  const after=new Date(Date.now()-14*864e5).toISOString();
+  const seen=new Set(),ids=[];
+  const groups=[];for(let i=0;i<kws.length;i+=4)groups.push(kws.slice(i,i+4).join('|'));
+  for(const g of groups){
+    try{
+      const s=await ytFetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&regionCode=TW&order=viewCount&publishedAfter=${encodeURIComponent(after)}&maxResults=20&q=${encodeURIComponent(g)}&key=${ytCfg.key}`);
+      (s.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
+    }catch(e){}
+  }
+  const out=[];
+  for(let i=0;i<ids.length;i+=50){
+    const vs=await ytFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids.slice(i,i+50).join(',')}&key=${ytCfg.key}`);
+    (vs.items||[]).forEach(v=>out.push({id:v.id,title:v.snippet.title,ch:v.snippet.channelTitle,tags:v.snippet.tags||[],views:+v.statistics.viewCount||0,sport:false,src:'YT',at:v.snippet.publishedAt,link:'https://youtu.be/'+v.id}));
+  }
+  return out;
+}
+// 動態關鍵詞:與常駐分開保存,切分頁/重開頁面都保留(兩頁共用)
+let dynKws=[],deepBusy=false,lastDeepStatus='';
+const KEY_DYN='ysyd_dyn',KEY_DYNH='ysyd_dyn_hist';
+function saveDyn(){try{localStorage.setItem(KEY_DYN,JSON.stringify({kws:dynKws,status:lastDeepStatus,day:todayLocal(),at:Date.now()}))}catch(e){}}
+function loadDyn(){
+  try{
+    const d=JSON.parse(localStorage.getItem(KEY_DYN));
+    if(d&&Array.isArray(d.kws)){dynKws=d.kws;lastDeepStatus=d.status||''}
+    // 去重+上限15(防暴增)
+    const seenK=new Set();
+    dynKws=dynKws.filter(x=>{if(!x||!x.kw||seenK.has(x.kw))return false;seenK.add(x.kw);return true}).slice(-40);
+    // 每日更新:跨日時把昨天的詞歸檔進歷史,今日重新探索
+    if(d&&d.day&&d.day!==todayLocal()&&dynKws.length){
+      let h=[];try{h=JSON.parse(localStorage.getItem(KEY_DYNH))||[]}catch(e){}
+      h.unshift({date:d.day,kws:dynKws.map(x=>x.kw)});
+      localStorage.setItem(KEY_DYNH,JSON.stringify(h.slice(0,30)));
+      dynKws=[];
+      lastDeepStatus='🗓️ 新的一天:昨日關鍵詞已歸檔(見📜歷史),按「重新抓取」自動探索今日新詞';
+      saveDyn();
+    }
+  }catch(e){}
+}
+function activeDyn(){return dynKws.filter(d=>d.on).map(d=>d.kw)}
+function renderDynChips(status){
+  if(status!==undefined)lastDeepStatus=status;
+  saveDyn();
+  if(!dynKws.length){deepMsg('');return}
+  const chips=dynKws.map((d,i)=>
+    `<span class="chip ${d.on?'warn':'date'}" style="cursor:pointer;margin:3px 2px;font-size:12.5px;padding:4px 10px;user-select:none" onclick="toggleDynKw(${i})">${d.on?'✓ ':''}${esc(d.kw)}</span>
+     <span title="用「${esc(d.kw)}」開 IG 站內搜尋" style="cursor:pointer;font-size:11px" onclick="nativeSearch('ig',decodeURIComponent('${encodeURIComponent(d.kw)}'))">📸</span><span title="用「${esc(d.kw)}」開 Threads 站內搜尋" style="cursor:pointer;font-size:11px;margin-right:4px" onclick="nativeSearch('th',decodeURIComponent('${encodeURIComponent(d.kw)}'))">🧵</span>`).join('');
+  deepMsg(`🕸️ <b>動態關鍵詞</b>(每日更新;點擊開/關,變更後自動重搜)
+    <span class="chip date" style="cursor:pointer;margin-left:6px" onclick="toggleDynHist()">📜 歷史</span><br>
+    ${chips}<br><span class="sub">${lastDeepStatus||''}</span>
+    <div id="dynHist" style="display:none;margin-top:8px;border-top:1px solid var(--border);padding-top:8px"></div>`);
+}
+function toggleDynHist(){
+  const el=document.getElementById('dynHist');if(!el)return;
+  if(el.style.display==='block'){el.style.display='none';return}
+  let h=[];try{h=JSON.parse(localStorage.getItem(KEY_DYNH))||[]}catch(e){}
+  el.style.display='block';
+  el.innerHTML=h.length?'<b>📜 關鍵詞歷史</b>(點任一詞加回今日組合):<br>'+h.slice(0,14).map(d=>
+    `<div style="margin:4px 0"><b>${esc(d.date)}</b>:${d.kws.map(k=>`<span class="chip date" style="cursor:pointer;margin:2px" onclick="reAddKw(decodeURIComponent('${encodeURIComponent(k)}'))">${esc(k)}</span>`).join('')}</div>`).join('')
+    :'<span class="sub">還沒有歷史紀錄(跨日後自動歸檔)</span>';
+}
+function reAddKw(kw){
+  if(dynKws.some(d=>d.kw===kw)){toast('「'+kw+'」已在今日詞組');return}
+  dynKws.push({kw,on:true});
+  renderDynChips('已從歷史加回「'+kw+'」,重搜中…');
+  if(deepBusy){deepPending=true}else{deepSearch()}
+}
+async function deepExplore(){
+  if(deepBusy){toast('深搜進行中,稍等一下');return}
+  if(!hasAI()){toast('需要 Gemini 金鑰(⚙️ 設定)');return}
+  let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_TR))}catch(e){}
+  const cur=(cache&&cache.items)||[];
+  if(!cur.length){toast('先按「🔄 重新抓取」載入話題再探索');return}
+  deepMsg('🕸️ 從 '+cur.length+' 條話題萃取新關鍵詞…');
+  try{
+    const feed=cur.slice(0,40).map(i=>i.title).join('\n');
+    const known=[...topicKws(),...dynKws.map(d=>d.kw)];
+    const txt=await aiText(`以下是台灣啦啦隊相關的熱門標題清單:\n${feed}\n\n從清單中萃取「值得進一步搜尋」的新關鍵詞:出現的人名、事件名、活動名、流行梗、新竄起的成員。只保留與台灣/韓國啦啦隊「直接相關」的詞(成員人名、應援、球團、見面會等),與啦啦隊無關的藝人、社會事件、負面新聞一律排除。排除這些已知詞:${known.join('、')}。只輸出 JSON 字串陣列,最多8個,依熱度排序,例如 ["關鍵詞1","關鍵詞2"],不要輸出其他文字。`,false);
+    const m=txt.match(/\[[\s\S]*?\]/);
+    if(!m)throw new Error('萃取不到新關鍵詞');
+    const fresh=JSON.parse(m[0]).filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim())
+      .filter(k=>!known.includes(k)).slice(0,8);
+    fresh.forEach(k=>{
+      if(dynKws.length>=40){const idx=dynKws.findIndex(d2=>!d2.on);if(idx>=0)dynKws.splice(idx,1);else return}
+      dynKws.push({kw:k,on:true});
+    });
+    if(!dynKws.length)throw new Error('這一輪沒有發現新關鍵詞');
+    renderDynChips(fresh.length?`發現 ${fresh.length} 個新詞,深搜中…約20秒`:'沒有更多新詞,以現有組合重搜…');
+    await deepSearch();
+  }catch(e){deepMsg('❌ 深度探索失敗:'+esc(e.message))}
+}
+let deepPending=false;
+async function toggleDynKw(i){
+  if(!dynKws[i].on&&activeDyn().length>=15){toast('最多同時啟用 15 個關鍵詞,先關掉一些再開');return}
+  dynKws[i].on=!dynKws[i].on;
+  renderDynChips('關鍵詞組合變更…(搜尋中仍可繼續點選,會以最新組合執行)');
+  if(deepBusy){deepPending=true;return}
+  await deepSearch();
+}
+// 從新結果自動萃取更多新詞,加入動態群(預設關閉,點擊即啟用重搜)
+async function autoExtendKws(newItems){
+  if(!newItems.length)return 0;
+  try{
+    const known=[...topicKws(),...dynKws.map(d=>d.kw)];
+    const txt=await aiText(`以下是新抓到的台灣啦啦隊相關熱門標題:\n${newItems.slice(0,20).map(i=>i.title).join('\n')}\n\n萃取值得進一步搜尋的新關鍵詞(人名/事件/活動/梗),只保留與啦啦隊直接相關的,排除已知詞:${known.join('、')}。只輸出 JSON 字串陣列,最多5個,不要其他文字。`,false);
+    const m=txt.match(/\[[\s\S]*?\]/);if(!m)return 0;
+    const fresh=JSON.parse(m[0]).filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim()).filter(k=>!known.includes(k)).slice(0,5);
+    let addedN=0;
+    fresh.forEach(k=>{
+      if(dynKws.length>=40){const idx=dynKws.findIndex(d2=>!d2.on);if(idx>=0)dynKws.splice(idx,1);else return}
+      dynKws.push({kw:k,on:false});addedN++;
+    });
+    return addedN;
+  }catch(e){return 0}
+}
+async function deepSearch(){
+  deepBusy=true;
+  try{
+    do{
+      deepPending=false;
+      let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_TR))}catch(e){}
+      const base=((cache&&cache.items)||[]).filter(i=>i.gen!==2||i.ext);
+      const act=activeDyn().slice(0,15);
+      let added=0;const newOnes=[];
+      if(act.length){
+        const yt2=await deepYT(act);
+        // IG/Threads:一次一個關鍵詞,逐一精準搜尋
+        const cross2=[];
+        for(const kw of act.slice(0,6)){
+          renderDynChips(`🔎 IG/Threads 逐詞搜尋中:「${esc(kw)}」…`);
+          cross2.push(...await crossOne(kw));
+          if(deepPending)break;
+        }
+        const seenId=new Set(base.map(i=>i.id)),seenT=new Set(base.map(i=>i.title));
+        [...cross2,...yt2].forEach(i=>{
+          if(seenId.has(i.id)||seenT.has(i.title))return;
+          i.gen=2;base.push(i);seenT.add(i.title);newOnes.push(i);added++;
+        });
+      }
+      if(deepPending)continue; // 中途切換了關鍵字 → 直接以最新組合重跑
+      localStorage.setItem(KEY_TR,JSON.stringify({at:Date.now(),kw:topicKws().join(','),items:base}));
+      const extN=await autoExtendKws(newOnes);
+      if(deepPending)continue;
+      await renderTopics(false);
+      renderDynChips(`✅ 啟用 ${act.length} 個動態詞、新增 ${added} 條(標🕸️),潛力匹配已重算。${extN?`並自動發現 ${extN} 個新詞(灰色未啟用,點擊即搜)。`:''}`);
+    }while(deepPending);
+  }catch(e){renderDynChips(`❌ ${esc(e.message)} <span class="chip date" style="cursor:pointer" onclick="pplxFallback()">🔎 改用 Perplexity 網頁版查這題</span>`)}
+  finally{deepBusy=false}
+}
+// IG/Threads 站內搜尋:免 API 免 token,開你登入的平台原生搜尋
+function nativeSearch(platform,kw){
+  const k=kw||activeDyn()[0]||topicKws()[0];
+  const u=platform==='ig'
+    ?'https://www.instagram.com/explore/search/keyword/?q='+encodeURIComponent(k)
+    :'https://www.threads.net/search?q='+encodeURIComponent(k)+'&serp_type=default';
+  window.open(u,'_blank');
+}
+// 第二順位:Gemini 失敗時,把同樣的查詢帶到 Perplexity 網頁版(用你的訂閱)
+function pplxFallback(){
+  const kws=[...topicKws().slice(0,5),...activeDyn()];
+  pplx(`最近7天「${kws.join('、')}」在 YouTube、Instagram、Threads、新聞上的熱門話題與爆紅事件有哪些?依時間新到舊列出,每條附原始連結與發布日期,並給我3個適合台灣啦啦隊主題YouTube頻道的短影片切入角度。`);
+}
+function renderChLine(){
+  const t=new Date();
+  let line=`今天是 ${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()}(週${'日一二三四五六'[t.getDay()]})`;
+  try{
+    const cs=JSON.parse(localStorage.getItem(KEY_CH));
+    if(cs&&cs.subs)line+=` · 訂閱 ${(+cs.subs).toLocaleString()} · 總觀看 ${(+cs.views).toLocaleString()}`;
+    else line+=' · 按 ⚙️ 連線 YouTube 自動同步數據';
+  }catch(e){}
+  document.getElementById('todayLine').textContent=line;
+}
+
+// 啟動
+load();loadYt();loadTok();loadDyn();autoCreateDaily();
+renderChLine();renderAll();
+trySilentLogin();
+// 有設定金鑰且超過1小時未同步 → 自動同步
+if(ytCfg.key&&ytCfg.handle&&Date.now()-(+localStorage.getItem('ysyd_lastsync')||0)>3600e3)syncYT(true);
+setInterval(()=>{autoCreateDaily();renderAll()},60000);
+</script>
+</body>
+</html>
