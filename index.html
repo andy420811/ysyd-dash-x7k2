@@ -184,9 +184,9 @@
     <div class="field"><label>OAuth 用戶端 ID(進階,分析未公開影片用)</label><input id="fClientId" placeholder="xxxx.apps.googleusercontent.com"></div>
     <div class="field"><label>Gemini API 金鑰(可填多把,用逗號分隔,額度自動輪替)</label><input id="fGemKey" type="password" placeholder="AIza...,AIza...(不同 Google 帳號各產一把,額度×N)"></div>
     <div class="field"><label>Gemini 模型(額度滿會自動降級到 flash-lite)</label><select id="fGemModel">
-      <option value="gemini-2.5-flash">gemini-2.5-flash(預設,品質佳,免費額度較少)</option>
-      <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite(免費額度多、速度快)</option>
-      <option value="gemini-2.0-flash">gemini-2.0-flash(備用)</option>
+      <option value="gemini-flash-latest">gemini-flash-latest(推薦,自動跟隨最新版)</option>
+      <option value="gemini-3.5-flash">gemini-3.5-flash(目前最新正式版)</option>
+      <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite(輕量,額度多速度快)</option>
     </select></div>
     <div class="field"><label>話題關鍵字(逗號分隔,最多12個,可放人名追個人動態)</label><input id="fTopicKw" placeholder="預設含:台灣/韓國啦啦隊、李多慧、安芝儇、林襄、峮峮、李雅英、河智媛、邊荷律…"></div>
     <button class="btn big" style="margin:0 0 12px" onclick="oauthLogin()">🔐 登入 Google(讀取私人/未列出影片)</button>
@@ -625,7 +625,7 @@ function openSettings(){
   document.getElementById('fKey').value=ytCfg.key||'';
   document.getElementById('fClientId').value=ytCfg.clientId||'';
   document.getElementById('fGemKey').value=ytCfg.gemKey||'';
-  document.getElementById('fGemModel').value=ytCfg.gemModel||'gemini-2.5-flash';
+  document.getElementById('fGemModel').value=gemModel();
   document.getElementById('fTopicKw').value=ytCfg.topicKw||'';
   document.getElementById('ytOverlay').classList.add('show');
 }
@@ -963,7 +963,7 @@ async function gemFetch(makeUrl,opts){
   throw new Error('Gemini 重試多次仍限流('+keys.length+' 把金鑰):'+lastErr);
 }
 function hasAI(){return gemKeys().length>0}
-function gemModel(){return ytCfg.gemModel||'gemini-2.5-flash'}
+function gemModel(){const m=ytCfg.gemModel||'';return (!m||/^gemini-2\./.test(m))?'gemini-flash-latest':m}
 // 文字任務:Gemini 多金鑰輪替+主模型額度滿自動降級 flash-lite
 async function aiTextWith(model,prompt,useSearch){
   const body={contents:[{parts:[{text:prompt}]}]};
@@ -979,9 +979,9 @@ async function aiText(prompt,useSearch){
   if(!gemKeys().length)throw new Error('請先在 ⚙️ 填 Gemini 金鑰');
   try{return await aiTextWith(gemModel(),prompt,useSearch)}
   catch(e){
-    if(gemModel()!=='gemini-2.5-flash-lite'&&/限流|quota|exhaust|rate|overload|demand|unavailable/i.test(e.message)){
-      toast('主模型額度滿,自動改用 flash-lite 繼續');
-      return await aiTextWith('gemini-2.5-flash-lite',prompt,useSearch);
+    if(gemModel()!=='gemini-3.1-flash-lite'&&/限流|quota|exhaust|rate|overload|demand|unavailable|no longer available/i.test(e.message)){
+      toast('主模型不可用或額度滿,自動改用 flash-lite 繼續');
+      return await aiTextWith('gemini-3.1-flash-lite',prompt,useSearch);
     }
     throw e;
   }
@@ -1348,7 +1348,4 @@ renderChLine();renderAll();
 trySilentLogin();
 // 有設定金鑰且超過1小時未同步 → 自動同步
 if(ytCfg.key&&ytCfg.handle&&Date.now()-(+localStorage.getItem('ysyd_lastsync')||0)>3600e3)syncYT(true);
-setInterval(()=>{autoCreateDaily();renderAll()},60000);
-</script>
-</body>
-</html>
+setInterval(()=>{a

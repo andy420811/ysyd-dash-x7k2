@@ -161,7 +161,7 @@ async function gemFetch(makeUrl,opts){
   throw new Error('Gemini 重試多次仍限流('+keys.length+' 把金鑰):'+lastErr);
 }
 function hasAI(){return gemKeys().length>0}
-function gemModel(){return ytCfg.gemModel||'gemini-2.5-flash'}
+function gemModel(){const m=ytCfg.gemModel||'';return (!m||/^gemini-2\./.test(m))?'gemini-flash-latest':m}
 // 文字任務:Gemini 多金鑰輪替+主模型額度滿自動降級 flash-lite
 async function aiTextWith(model,prompt,useSearch){
   const body={contents:[{parts:[{text:prompt}]}]};
@@ -177,9 +177,9 @@ async function aiText(prompt,useSearch){
   if(!gemKeys().length)throw new Error('請先在儀表板 ⚙️ 填 Gemini 金鑰');
   try{return await aiTextWith(gemModel(),prompt,useSearch)}
   catch(e){
-    if(gemModel()!=='gemini-2.5-flash-lite'&&/限流|quota|exhaust|rate|overload|demand|unavailable/i.test(e.message)){
-      toast('主模型額度滿,自動改用 flash-lite 繼續');
-      return await aiTextWith('gemini-2.5-flash-lite',prompt,useSearch);
+    if(gemModel()!=='gemini-3.1-flash-lite'&&/限流|quota|exhaust|rate|overload|demand|unavailable|no longer available/i.test(e.message)){
+      toast('主模型不可用或額度滿,自動改用 flash-lite 繼續');
+      return await aiTextWith('gemini-3.1-flash-lite',prompt,useSearch);
     }
     throw e;
   }
