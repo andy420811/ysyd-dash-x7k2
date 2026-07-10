@@ -818,6 +818,41 @@ async function crossOne(kw){
     }));
   }catch(e){return []}
 }
+// 即時新聞:Google News RSS(分鐘級、免費、不吃API額度)
+// 三層備援:本機轉發(localhost)→ 公共轉發A → 公共轉發B,雲端/手機也能用
+async function fetchGNews(kws){
+  const q=kws.slice(0,6).map(k=>'"'+k+'"').join(' OR ')+' when:1d';
+  const rssUrl='https://news.google.com/rss/search?q='+encodeURIComponent(q)+'&hl=zh-TW&gl=TW&ceid=TW:zh-Hant';
+  // 1) 本機轉發(XML)
+  if(location.hostname==='localhost'){
+    try{
+      const r=await fetch('/gnews?q='+encodeURIComponent(q));
+      if(r.ok){
+        const txt=await r.text();
+        if(txt.indexOf('<item')>=0){
+          const xml=new DOMParser().parseFromString(txt,'text/xml');
+          const out=[...xml.querySelectorAll('item')].slice(0,15).map(it=>{
+            const g=t=>{const e=it.getElementsByTagName(t)[0];return e?e.textContent:''};
+            const pd=g('pubDate');
+            return {id:uid(),src:'新聞',title:g('title'),ch:(g('source')||'Google News')+' · 即時RSS',tags:[],views:0,sport:false,
+              at:pd?new Date(pd).toISOString():null,fetchedAt:Date.now(),link:g('link')||'#'};
+          }).filter(x=>x.title);
+          if(out.length)return out;
+        }
+      }
+    }catch(e){}
+  }
+  // 2) 雲端/手機:rss2json(免費,回傳 JSON,已實測可用)
+  try{
+    const r=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(rssUrl));
+    const j=await r.json();
+    if(j.status==='ok')return (j.items||[]).slice(0,15).map(i=>({
+      id:uid(),src:'新聞',title:i.title||'',ch:'Google News · 即時RSS',tags:[],views:0,sport:false,
+      at:i.pubDate?new Date(i.pubDate.replace(' ','T')+'Z').toISOString():null,fetchedAt:Date.now(),link:i.link||'#'
+    })).filter(x=>x.title);
+  }catch(e){}
+  return [];
+}
 async function fetchTrends(force){
   if(!ytCfg.key){toast('請先按 ⚙️ 設定 API 金鑰');openSettings();return null}
   let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_TR))}catch(e){}
@@ -833,15 +868,20 @@ async function fetchTrends(force){
       (s.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
     }catch(e){}
   }
+  // 加一道「24小時內最新發布」掃描,確保最新片不漏
+  try{
+    const s2=await ytFetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&regionCode=TW&order=date&publishedAfter=${encodeURIComponent(new Date(Date.now()-864e5).toISOString())}&maxResults=15&q=${encodeURIComponent(kws.slice(0,4).join('|'))}&key=${ytCfg.key}`);
+    (s2.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
+  }catch(e){}
   const items=[];
   for(let i=0;i<ids.length;i+=50){
     const vs=await ytFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids.slice(i,i+50).join(',')}&key=${ytCfg.key}`);
     (vs.items||[]).forEach(v=>items.push({id:v.id,title:v.snippet.title,ch:v.snippet.channelTitle,tags:v.snippet.tags||[],views:+v.statistics.viewCount||0,sport:false,src:'YT',at:v.snippet.publishedAt,link:'https://youtu.be/'+v.id}));
   }
   items.sort((a,b)=>b.views-a.views);
-  // 2) FB/IG/Threads/新聞:Gemini 搜尋
-  const cross=await crossTopics(kws);
-  const all=[...cross,...items];
+  // 2) FB/IG/Threads/新聞:Gemini 搜尋 + 即時新聞 RSS
+  const [cross,news]=await Promise.all([crossTopics(kws),fetchGNews(kws)]);
+  const all=[...news,...cross,...items];
   // 保留 Chrome 實查注入的項目(標 ext,7天內),不被重抓洗掉
   const prevExt=((cache&&cache.items)||[]).filter(i=>i.ext&&Date.now()-(i.fetchedAt||0)<7*864e5);
   const seenT2=new Set(all.map(i=>i.title));

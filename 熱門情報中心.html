@@ -193,7 +193,7 @@ async function ytFetch(url){
 // ── 資料抓取 ──
 const KEY_INTEL='ysyd_intel', KEY_SUM='ysyd_intel_sum';
 let items=[],curFilter='全部';
-const SRC_ICON={'YT':['▶️','p-yt'],'FB':['📘','p-fb'],'IG':['📸','p-ig'],'Threads':['🧵','p-th'],'新聞':['📰','p-news']};
+const SRC_ICON={'YT':['▶️','p-yt'],'FB':['📘','p-fb'],'IG':['📸','p-ig'],'Threads':['🧵','p-th'],'新聞':['📰','p-news'],'PTT':['🗣️','p-news']};
 function srcIcon(s){const m=SRC_ICON[s]||['🌐','p-news'];return `<span class="pico ${m[1]}">${m[0]}</span>`}
 function normSrc(s){
   s=String(s||'').toUpperCase();
@@ -214,6 +214,11 @@ async function fetchYT(kws){
       (s.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
     }catch(e){}
   }
+  // 加一道「24小時內最新發布」掃描,確保最新片不漏
+  try{
+    const s2=await ytFetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&regionCode=TW&order=date&publishedAfter=${encodeURIComponent(new Date(Date.now()-864e5).toISOString())}&maxResults=15&q=${encodeURIComponent(kws.slice(0,4).join('|'))}&key=${ytCfg.key}`);
+    (s2.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
+  }catch(e){}
   const out=[];
   for(let i=0;i<ids.length;i+=50){
     const vs=await ytFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids.slice(i,i+50).join(',')}&key=${ytCfg.key}`);
@@ -249,6 +254,93 @@ async function crossOne(kw){
     }));
   }catch(e){return []}
 }
+// 即時新聞:Google News RSS(分鐘級、免費、不吃API額度)
+// 三層備援:本機轉發(localhost)→ 公共轉發A → 公共轉發B,雲端/手機也能用
+async function fetchGNews(kws){
+  const q=kws.slice(0,6).map(k=>'"'+k+'"').join(' OR ')+' when:1d';
+  const rssUrl='https://news.google.com/rss/search?q='+encodeURIComponent(q)+'&hl=zh-TW&gl=TW&ceid=TW:zh-Hant';
+  // 1) 本機轉發(XML)
+  if(location.hostname==='localhost'){
+    try{
+      const r=await fetch('/gnews?q='+encodeURIComponent(q));
+      if(r.ok){
+        const txt=await r.text();
+        if(txt.indexOf('<item')>=0){
+          const xml=new DOMParser().parseFromString(txt,'text/xml');
+          const out=[...xml.querySelectorAll('item')].slice(0,15).map(it=>{
+            const g=t=>{const e=it.getElementsByTagName(t)[0];return e?e.textContent:''};
+            const pd=g('pubDate');
+            return {id:uid(),src:'新聞',title:g('title'),ch:(g('source')||'Google News')+' · 即時RSS',views:0,why:'',heat:'中',
+              at:pd?new Date(pd).toISOString():null,fetchedAt:Date.now(),link:g('link')||'#'};
+          }).filter(x=>x.title);
+          if(out.length)return out;
+        }
+      }
+    }catch(e){}
+  }
+  // 2) 雲端/手機:rss2json(免費,回傳 JSON,已實測可用)
+  try{
+    const r=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(rssUrl));
+    const j=await r.json();
+    if(j.status==='ok')return (j.items||[]).slice(0,15).map(i=>({
+      id:uid(),src:'新聞',title:i.title||'',ch:'Google News · 即時RSS',views:0,why:'',heat:'中',
+      at:i.pubDate?new Date(i.pubDate.replace(' ','T')+'Z').toISOString():null,fetchedAt:Date.now(),link:i.link||'#'
+    })).filter(x=>x.title);
+  }catch(e){}
+  return [];
+}
+// PTT 棒球板搜尋(經本機轉發;推文數=重要性訊號;雲端略過)
+async function fetchPTT(kws){
+  if(location.hostname!=='localhost')return [];
+  const out=[],seen=new Set(),now=new Date();
+  for(const kw of ['啦啦隊',...kws.slice(0,2)].filter((v,i,a)=>a.indexOf(v)===i)){
+    try{
+      const r=await fetch('/ptt?q='+encodeURIComponent(kw));
+      if(!r.ok)continue;
+      const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+      doc.querySelectorAll('.r-ent').forEach(e=>{
+        const a=e.querySelector('.title a');if(!a)return;
+        const href='https://www.ptt.cc'+a.getAttribute('href');
+        if(seen.has(href))return;seen.add(href);
+        const pushTxt=((e.querySelector('.nrec')||{}).textContent||'').trim();
+        const pn=pushTxt==='爆'?100:(parseInt(pushTxt)||0);
+        const dTxt=((e.querySelector('.date')||{}).textContent||'').trim(); // 'M/DD'
+        let at=null;
+        const dm=dTxt.match(/^(\d{1,2})\/(\d{1,2})$/);
+        if(dm){
+          let d=new Date(now.getFullYear(),+dm[1]-1,+dm[2],12,0,0);
+          if(d>now)d=new Date(now.getFullYear()-1,+dm[1]-1,+dm[2],12,0,0);
+          if(now-d>7*864e5)return; // 只留近7天
+          at=d.toISOString();
+        }
+        out.push({id:uid(),src:'PTT',title:a.textContent.trim(),ch:'PTT Baseball',views:0,
+          why:pushTxt?('推 '+pushTxt):'',heat:pn>=50?'高':'中',at,fetchedAt:Date.now(),link:href});
+      });
+    }catch(e){}
+  }
+  return out.slice(0,15);
+}
+// AI 主編:對「做影片選題」的重要性評分 1-5
+let sortMode='time';
+async function rateImportance(){
+  if(!hasAI()){toast('需 Gemini 金鑰');return}
+  if(!items.length){toast('先載入情報');return}
+  toast('⭐ AI 主編評分中…');
+  const list=items.slice(0,30);
+  const feed=list.map((i,idx)=>idx+'|'+i.src+'|'+String(i.title).slice(0,60)+(i.why?'('+i.why+')':'')).join('\n');
+  try{
+    const txt=await aiText(`你是台灣啦啦隊主題 YouTube 頻道的主編。以下是編號情報清單,評估每條對「影片選題」的重要性 1-5 分(5=重大事件/全網熱議/必須立刻跟進,4=很有潛力,3=可做,2=普通,1=瑣碎):\n${feed}\n只輸出 JSON 陣列:[{"i":編號,"s":分數,"w":"一句原因,15字內"}],每條都要評,不要輸出其他文字。`,false);
+    const m=txt.match(/\[[\s\S]*\]/);if(!m)throw new Error('無法解析評分');
+    JSON.parse(m[0]).forEach(r=>{const it=list[r.i];if(it&&r.s){it.imp=+r.s;it.impWhy=r.w||''}});
+    localStorage.setItem(KEY_INTEL,JSON.stringify({at:Date.now(),kw:topicKws().join(','),items}));
+    sortMode='imp';renderAll();
+    toast('⭐ 評分完成,已按重要度排序');
+  }catch(e){toast('❌ '+e.message)}
+}
+function setSort(m){
+  if(m==='imp'&&!items.some(i=>i.imp)){rateImportance();return}
+  sortMode=m;renderAll();
+}
 async function refreshAll(force){
   loadCfg();
   const banner=document.getElementById('cfgBanner');
@@ -264,8 +356,8 @@ async function refreshAll(force){
   }
   document.getElementById('feed').innerHTML='<div class="empty">📡 掃描各平台熱門中…約15-30秒</div>';
   const kws=topicKws();
-  const [yt,cross]=await Promise.all([fetchYT(kws),fetchCross(kws)]);
-  items=[...cross,...yt];
+  const [yt,cross,news,ptt]=await Promise.all([fetchYT(kws),fetchCross(kws),fetchGNews(kws),fetchPTT(kws)]);
+  items=[...news,...ptt,...cross,...yt];
   // 保留 Chrome 實查注入的項目(標 ext,7天內),不被重抓洗掉
   const prevExt=((cache&&cache.items)||[]).filter(i=>i.ext&&Date.now()-(i.fetchedAt||0)<7*864e5);
   const seenT2=new Set(items.map(i=>i.title));
@@ -303,15 +395,18 @@ function renderAll(){
   document.getElementById('kFresh').textContent=yt.filter(v=>v.at&&Date.now()-new Date(v.at)<864e5).length;
   document.getElementById('kSrc').textContent=cross.length;
   document.getElementById('subLine').textContent=`關鍵字:${topicKws().join('、')} · 每30分鐘自動更新`;
-  // 篩選 chips
-  const srcs=['全部','YT','FB','IG','Threads','新聞'];
+  // 篩選 chips + 排序切換
+  const srcs=['全部','YT','FB','IG','Threads','新聞','PTT'];
   document.getElementById('filterChips').innerHTML=srcs.map(s=>
-    `<div class="fchip ${curFilter===s?'on':''}" onclick="curFilter='${s}';renderAll()">${s==='全部'?'全部':(SRC_ICON[s]?SRC_ICON[s][0]+' ':'')+s}</div>`).join('');
+    `<div class="fchip ${curFilter===s?'on':''}" onclick="curFilter='${s}';renderAll()">${s==='全部'?'全部':(SRC_ICON[s]?SRC_ICON[s][0]+' ':'')+s}</div>`).join('')
+    +`<div class="fchip ${sortMode==='time'?'on':''}" onclick="setSort('time')">🕐 時間</div>`
+    +`<div class="fchip ${sortMode==='imp'?'on':''}" onclick="setSort('imp')" title="AI 主編按選題重要性評分排序">⭐ 重要度</div>`;
   // 動態流
-  const list=items.filter(i=>curFilter==='全部'||i.src===curFilter);
+  let list=items.filter(i=>curFilter==='全部'||i.src===curFilter);
+  if(sortMode==='imp')list=[...list].sort((a,b)=>((b.imp||0)-(a.imp||0))||(sortKeyT(b)-sortKeyT(a)));
   document.getElementById('feed').innerHTML=list.length?list.map(i=>`
     <div class="item">
-      <div class="t">${srcIcon(i.src)}${esc(i.title)}${i.heat==='高'?' <span class="hot">🔥</span>':''}</div>
+      <div class="t">${srcIcon(i.src)}${esc(i.title)}${i.heat==='高'?' <span class="hot">🔥</span>':''}${i.imp?` <span class="chip warn" title="${esc(i.impWhy||'')}">⭐${i.imp}${i.impWhy?' '+esc(String(i.impWhy).slice(0,12)):''}</span>`:''}</div>
       <div class="meta">
         <span>${esc(i.ch)}</span>
         ${i.views?`<span class="hot">${fmtN(i.views)} 次觀看</span>`:''}
