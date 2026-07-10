@@ -686,7 +686,12 @@ async function ytAuthFetch(url){
 // ── 備份匯出/匯入(換瀏覽器或重灌免重填)──
 function exportData(){
   const data={};
-  ['ysyd_videos','ysyd_ideas','ysyd_yt','ysyd_chstats','ysyd_trends','ysyd_priv','ysyd_lastsync'].forEach(k=>{const v=localStorage.getItem(k);if(v!=null)data[k]=v});
+  // 匯出所有 ysyd_ 開頭的資料(設定、任務、靈感、關鍵詞、情報…全包)
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.indexOf('ysyd_')===0){const v=localStorage.getItem(k);if(v!=null)data[k]=v}
+  }
+  if(!data.ysyd_yt)toast('提醒:這個網域還沒有金鑰設定(可能在別的網址設定的)');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
   a.download='球是沅的-儀表板備份.json';a.click();
