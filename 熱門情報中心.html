@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>熱門情報中心 · 球是沅的</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root{ color-scheme: light;
+    --bg:#f4f6fa; --card:#ffffff; --card2:#eef1f6; --border:#dfe4ec;
+    --text:#17203a; --muted:#69738a; --accent:#e5484d; --accent2:#e8930c;
+    --green:#149d5b; --blue:#2b66e8; --purple:#7452d1; --pink:#d6409f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+  body{background:var(--bg);color:var(--text);min-height:100vh;padding:16px;max-width:1200px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  h1{font-size:20px;display:flex;align-items:center;gap:8px}
+  .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  .btn{background:var(--blue);color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;display:inline-block}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  /* 指標卡 */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+  .kpi .ic{font-size:18px}
+  .kpi .num{font-size:22px;font-weight:800;margin-top:2px}
+  .kpi .lbl{font-size:11px;color:var(--muted)}
+  /* 摘要卡 */
+  .brief{background:linear-gradient(135deg,#fff7f0,#f0f5ff);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+  .brief h2{font-size:15px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+  .brief .body{white-space:pre-wrap;font-size:13.5px;line-height:1.85}
+  /* 主區 */
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .panel h3{font-size:14px;margin-bottom:10px}
+  .chartwrap{position:relative;height:200px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .fchip{padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12.5px;cursor:pointer}
+  .fchip.on{background:var(--text);color:#fff;border-color:var(--text);font-weight:700}
+  .item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--card)}
+  .item .t{font-size:13.5px;font-weight:600;line-height:1.5}
+  .item .meta{font-size:11.5px;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .item .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .pico{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;font-size:12px;margin-right:6px;vertical-align:middle}
+  .p-yt{background:#fdeaea} .p-fb{background:#e8f0fe} .p-ig{background:#fde8f4} .p-th{background:#eee} .p-news{background:#fff3e0}
+  .hot{font-weight:800;color:var(--accent)}
+  .whybox{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:9px;margin-top:8px;font-size:12.5px;line-height:1.7;display:none;white-space:pre-wrap}
+  .empty{color:var(--muted);text-align:center;padding:36px;font-size:13.5px}
+  .toplist .row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+  .toplist .row:last-child{border-bottom:none}
+  .toplist a{color:var(--text);text-decoration:none;flex:1}
+  .toplist .v{color:var(--accent);font-weight:700;white-space:nowrap}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;border-radius:20px;font-weight:700;font-size:13px;display:none;z-index:20}
+  .banner{background:#fff8e6;border:1px solid var(--accent2);border-radius:10px;padding:12px;font-size:13px;margin-bottom:12px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>📡 熱門情報中心</h1>
+    <div class="sub" id="subLine">彙整 YT / FB / IG / Threads / 新聞的即時熱門</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a class="btn ghost" href="球是沅的-頻道管理儀表板.html">← 回管理儀表板</a>
+    <button class="btn ghost" onclick="deepExplore()" title="從搜尋結果自動發現新關鍵詞,再往下深挖一層">🕸️ 深度探索</button>
+    <button class="btn" onclick="refreshAll(true)">🔄 立即更新</button>
+  </div>
+</header>
+
+<div class="banner" id="cfgBanner"></div>
+
+<div class="kpis">
+  <div class="kpi"><div class="ic">🔥</div><div class="num" id="kTotal">-</div><div class="lbl">追蹤中話題</div></div>
+  <div class="kpi"><div class="ic">▶️</div><div class="num" id="kViews">-</div><div class="lbl">YT 熱門總觀看</div></div>
+  <div class="kpi"><div class="ic">🚀</div><div class="num" id="kTop">-</div><div class="lbl">最熱單支觀看</div></div>
+  <div class="kpi"><div class="ic">🕐</div><div class="num" id="kFresh">-</div><div class="lbl">24小時內新片</div></div>
+  <div class="kpi"><div class="ic">📱</div><div class="num" id="kSrc">-</div><div class="lbl">跨平台話題數</div></div>
+</div>
+
+<div class="brief">
+  <h2>⚡ 快速摘要
+    <span>
+      <span class="sub" id="briefTime"></span>
+      <button class="btn sm ghost" onclick="makeBrief(true)">重新摘要</button>
+    </span>
+  </h2>
+  <div class="body" id="briefBody">載入中…</div>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="panel" id="deepBar" style="display:none;margin-bottom:10px;font-size:13px;line-height:1.9"></div>
+    <div class="chips" id="filterChips"></div>
+    <div id="feed"><div class="empty">載入中…</div></div>
+  </div>
+  <div>
+    <div class="panel" style="margin-bottom:12px">
+      <h3>📊 平台話題分布</h3>
+      <div class="chartwrap"><canvas id="chSrc"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>🏆 YT 觀看 Top 5</h3>
+      <div class="toplist" id="topList">-</div>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <h3 style="display:flex;justify-content:space-between;align-items:center">📅 近期啦啦隊活動<button class="btn sm ghost" onclick="fetchEvents(true)">🔄</button></h3>
+      <div class="toplist" id="evList">-</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 與管理儀表板共用設定(同網域 localStorage)──
+let ytCfg={};
+function loadCfg(){try{ytCfg=JSON.parse(localStorage.getItem('ysyd_yt'))||{}}catch(e){ytCfg={}}}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',2800)}
+const DEFAULT_KW='台灣啦啦隊,韓國啦啦隊,中職啦啦隊,樂天女孩,啦啦隊應援,李多慧,安芝儇,林襄,峮峮,李雅英,河智媛,邊荷律';
+function topicKws(){return (ytCfg.topicKw||DEFAULT_KW).split(/[,,、]/).map(s=>s.trim()).filter(Boolean).slice(0,12)}
+
+// ── Gemini 多金鑰輪替(與儀表板相同機制)──
+let gemIdx=0;
+function gemKeys(){return String(ytCfg.gemKey||'').split(/[,\s]+/).filter(Boolean)}
+// 節流:免費層每分鐘20次,全域排隊+依金鑰數自動調整間隔
+let gemLast=0,gemQueue=Promise.resolve();
+function gemGap(){return Math.max(1200,3300/Math.max(1,gemKeys().length))}
+function gemThrottle(){
+  const run=gemQueue.then(async()=>{
+    const w=gemLast+gemGap()-Date.now();
+    if(w>0)await new Promise(r=>setTimeout(r,w));
+    gemLast=Date.now();
+  });
+  gemQueue=run.catch(()=>{});
+  return run;
+}
+async function gemFetch(makeUrl,opts){
+  const keys=gemKeys();
+  if(!keys.length)throw new Error('尚未設定 Gemini 金鑰');
+  let lastErr='';
+  for(let pass=0;pass<3;pass++){
+    for(let i=0;i<keys.length;i++){
+      const k=keys[(gemIdx+i)%keys.length];
+      await gemThrottle();
+      const r=await fetch(makeUrl(k),opts);
+      if(r.ok){gemIdx=(gemIdx+i)%keys.length;return r}
+      const e=await r.json().catch(()=>({}));
+      const msg=e.error&&e.error.message?e.error.message:'HTTP '+r.status;
+      if(r.status===429||r.status===503||/quota|exhaust|rate ?limit|overload|high demand|unavailable/i.test(msg)){lastErr=msg;continue}
+      throw new Error(msg);
+    }
+    if(pass<2){
+      const m=lastErr.match(/retry in ([\d.]+)s/i);
+      const wait=Math.min(30,(m?parseFloat(m[1]):10)+2);
+      await new Promise(r=>setTimeout(r,wait*1000));
+    }
+  }
+  throw new Error('Gemini 重試多次仍限流('+keys.length+' 把金鑰):'+lastErr);
+}
+function hasAI(){return gemKeys().length>0}
+function gemModel(){const m=ytCfg.gemModel||'';return (!m||/^gemini-2\./.test(m))?'gemini-flash-latest':m}
+// 文字任務:Gemini 多金鑰輪替+主模型額度滿自動降級 flash-lite
+async function aiTextWith(model,prompt,useSearch){
+  const body={contents:[{parts:[{text:prompt}]}]};
+  if(useSearch)body.tools=[{google_search:{}}];
+  const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${k}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json();
+  const t=(((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+  if(!t)throw new Error('Gemini 沒有回傳內容');
+  return t;
+}
+async function aiText(prompt,useSearch){
+  if(!gemKeys().length)throw new Error('請先在儀表板 ⚙️ 填 Gemini 金鑰');
+  try{return await aiTextWith(gemModel(),prompt,useSearch)}
+  catch(e){
+    if(gemModel()!=='gemini-3.1-flash-lite'&&/限流|quota|exhaust|rate|overload|demand|unavailable|no longer available/i.test(e.message)){
+      toast('主模型不可用或額度滿,自動改用 flash-lite 繼續');
+      return await aiTextWith('gemini-3.1-flash-lite',prompt,useSearch);
+    }
+    throw e;
+  }
+}
+async function ytFetch(url){
+  const r=await fetch(url);
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error&&e.error.message?e.error.message:'HTTP '+r.status)}
+  return r.json();
+}
+
+// ── 資料抓取 ──
+const KEY_INTEL='ysyd_intel', KEY_SUM='ysyd_intel_sum';
+let items=[],curFilter='全部';
+const SRC_ICON={'YT':['▶️','p-yt'],'FB':['📘','p-fb'],'IG':['📸','p-ig'],'Threads':['🧵','p-th'],'新聞':['📰','p-news']};
+function srcIcon(s){const m=SRC_ICON[s]||['🌐','p-news'];return `<span class="pico ${m[1]}">${m[0]}</span>`}
+function normSrc(s){
+  s=String(s||'').toUpperCase();
+  if(/YT|YOUTUBE/.test(s))return 'YT';
+  if(/FB|FACEBOOK/.test(s))return 'FB';
+  if(/IG|INSTAGRAM/.test(s))return 'IG';
+  if(/THREAD/.test(s))return 'Threads';
+  return '新聞';
+}
+async function fetchYT(kws){
+  if(!ytCfg.key)return [];
+  const after=new Date(Date.now()-3*864e5).toISOString();
+  const seen=new Set(),ids=[];
+  const groups=[];for(let i=0;i<kws.length;i+=4)groups.push(kws.slice(i,i+4).join('|'));
+  for(const g of groups){
+    try{
+      const s=await ytFetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&regionCode=TW&order=viewCount&publishedAfter=${encodeURIComponent(after)}&maxResults=20&q=${encodeURIComponent(g)}&key=${ytCfg.key}`);
+      (s.items||[]).forEach(it=>{const id=it.id&&it.id.videoId;if(id&&!seen.has(id)){seen.add(id);ids.push(id)}});
+    }catch(e){}
+  }
+  const out=[];
+  for(let i=0;i<ids.length;i+=50){
+    const vs=await ytFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids.slice(i,i+50).join(',')}&key=${ytCfg.key}`);
+    (vs.items||[]).forEach(v=>out.push({id:v.id,src:'YT',title:v.snippet.title,ch:v.snippet.channelTitle,views:+v.statistics.viewCount||0,at:v.snippet.publishedAt,link:'https://youtu.be/'+v.id}));
+  }
+  return out.sort((a,b)=>b.views-a.views);
+}
+async function fetchCross(kws){
+  if(!hasAI())return [];
+  const prompt=`用搜尋找出最近7天在 Facebook、Instagram、Threads、新聞網站上關於「${kws.join('、')}」的熱門話題、爆紅貼文、個人動態或活動(包含成員的IG發文、見面會、代言、綜藝節目、個人爭議或亮點表現)。只輸出 JSON 陣列:[{"topic":"話題標題(含人名)","platform":"FB / IG / Threads / 新聞 擇一","why":"為何熱門,20字內","heat":"高/中 擇一","date":"內容發布日期 YYYY-MM-DD,從來源判斷,不確定留空","url":"直接複製你搜尋來源的完整網址(instagram.com/threads.net/新聞頁面連結),這個欄位非常重要,必須從真實來源複製,不可編造"}]。最多15個,依熱度排序,不要輸出 JSON 以外的文字。`;
+  try{
+    const txt=await aiText(prompt,true);
+    const m=txt.match(/\[[\s\S]*\]/);
+    if(!m)return [];
+    return JSON.parse(m[0]).filter(o=>o&&o.topic).slice(0,15).map(o=>({
+      id:uid(),src:normSrc(o.platform),title:o.topic,why:o.why||'',heat:o.heat||'中',views:0,ch:o.platform||'網路',
+      at:(o.date&&/^\d{4}-\d{2}-\d{2}/.test(String(o.date)))?String(o.date).slice(0,10)+'T12:00:00':null,
+      fetchedAt:Date.now(),
+      link:(o.url&&/^https?:\/\/[^ ]+$/.test(o.url.trim())&&!/vertexaisearch|grounding-api/.test(o.url))?o.url.trim():'https://www.google.com/search?q='+encodeURIComponent(o.topic)
+    }));
+  }catch(e){return []}
+}
+// IG/Threads 逐一關鍵詞精準搜尋(深搜用,一次一個詞)
+async function crossOne(kw){
+  try{
+    const txt=await aiText(`用搜尋找出最近7天 Instagram 和 Threads 上關於「${kw}」的熱門貼文與個人動態(IG發文、限動話題、Threads討論串)。只輸出 JSON 陣列:[{"topic":"具體貼文/動態描述(含人名)","platform":"IG 或 Threads","why":"為何熱門,20字內","heat":"高/中 擇一","date":"發布日期 YYYY-MM-DD,不確定留空","url":"貼文完整網址(instagram.com/threads.net),必須從搜尋來源複製,找不到留空"}]。最多5個,依熱度排序,不要輸出 JSON 以外的文字。`,true);
+    const m=txt.match(/\[[\s\S]*\]/);if(!m)return [];
+    return JSON.parse(m[0]).filter(o=>o&&o.topic).slice(0,5).map(o=>({
+      id:uid(),src:normSrc(o.platform||'IG'),title:o.topic,why:o.why||'',heat:o.heat||'中',views:0,ch:o.platform||'IG',
+      at:(o.date&&/^\d{4}-\d{2}-\d{2}/.test(String(o.date)))?String(o.date).slice(0,10)+'T12:00:00':null,
+      fetchedAt:Date.now(),foundBy:kw,
+      link:(o.url&&/^https?:\/\/[^ ]+$/.test(o.url.trim())&&!/vertexaisearch|grounding-api/.test(o.url))?o.url.trim():'https://www.google.com/search?q='+encodeURIComponent(kw+' '+o.topic)
+    }));
+  }catch(e){return []}
+}
+async function refreshAll(force){
+  loadCfg();
+  const banner=document.getElementById('cfgBanner');
+  if(!ytCfg.key&&!gemKeys().length){
+    banner.style.display='block';
+    banner.innerHTML='⚠️ 讀不到金鑰設定。請確認:1) 用「啟動儀表板.bat」開啟本頁(和儀表板同網域才能共用設定) 2) 已在管理儀表板 ⚙️ 填好 YouTube 與 Gemini 金鑰。';
+    return;
+  }
+  banner.style.display='none';
+  let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_INTEL))}catch(e){}
+  if(!force&&cache&&Date.now()-cache.at<1800e3&&cache.kw===topicKws().join(',')){
+    items=cache.items;renderAll();makeBrief(false);return;
+  }
+  document.getElementById('feed').innerHTML='<div class="empty">📡 掃描各平台熱門中…約15-30秒</div>';
+  const kws=topicKws();
+  const [yt,cross]=await Promise.all([fetchYT(kws),fetchCross(kws)]);
+  items=[...cross,...yt];
+  // 保留 Chrome 實查注入的項目(標 ext,7天內),不被重抓洗掉
+  const prevExt=((cache&&cache.items)||[]).filter(i=>i.ext&&Date.now()-(i.fetchedAt||0)<7*864e5);
+  const seenT2=new Set(items.map(i=>i.title));
+  prevExt.forEach(i=>{if(!seenT2.has(i.title))items.push(i)});
+  items.sort((a,b)=>sortKeyT(b)-sortKeyT(a));
+  if(!items.length){document.getElementById('feed').innerHTML='<div class="empty">抓不到內容,檢查金鑰或調整儀表板 ⚙️ 的話題關鍵字</div>';return}
+  localStorage.setItem(KEY_INTEL,JSON.stringify({at:Date.now(),kw:kws.join(','),items}));
+  renderAll();
+  makeBrief(false);
+  // 新抓完資料 → 自動接著跑深度探索(6小時內只自動跑一次,省API額度;手動🕸️不受限)
+  if(hasAI()&&!deepBusy&&Date.now()-(+localStorage.getItem('ysyd_lastdeep')||0)>6*3600e3)setTimeout(()=>deepExplore(),100);
+}
+
+// ── 指標與渲染 ──
+function fmtN(n){return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n)}
+function ago(iso){
+  if(!iso)return '';
+  const m=Math.floor((Date.now()-new Date(iso))/60000);
+  if(m<1)return '剛剛';
+  if(m<60)return m+'分鐘前';
+  if(m<1440){const h=Math.floor(m/60),mm=m%60;return h+'小時'+(mm?mm+'分':'')+'前'}
+  const d=Math.floor(m/1440);
+  if(d<=7)return d+'天前';
+  const dt=new Date(iso);return (dt.getMonth()+1)+'/'+dt.getDate();
+}
+function sortKeyT(i){return i.at?+new Date(i.at):(i.fetchedAt||0)}
+function todayLocal(){const t=new Date();return t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2)}
+let chSrc=null;
+function renderAll(){
+  const yt=items.filter(i=>i.src==='YT');
+  const cross=items.filter(i=>i.src!=='YT');
+  document.getElementById('kTotal').textContent=items.length;
+  document.getElementById('kViews').textContent=fmtN(yt.reduce((s,v)=>s+v.views,0));
+  document.getElementById('kTop').textContent=yt.length?fmtN(Math.max(...yt.map(v=>v.views))):'0';
+  document.getElementById('kFresh').textContent=yt.filter(v=>v.at&&Date.now()-new Date(v.at)<864e5).length;
+  document.getElementById('kSrc').textContent=cross.length;
+  document.getElementById('subLine').textContent=`關鍵字:${topicKws().join('、')} · 每30分鐘自動更新`;
+  // 篩選 chips
+  const srcs=['全部','YT','FB','IG','Threads','新聞'];
+  document.getElementById('filterChips').innerHTML=srcs.map(s=>
+    `<div class="fchip ${curFilter===s?'on':''}" onclick="curFilter='${s}';renderAll()">${s==='全部'?'全部':(SRC_ICON[s]?SRC_ICON[s][0]+' ':'')+s}</div>`).join('');
+  // 動態流
+  const list=items.filter(i=>curFilter==='全部'||i.src===curFilter);
+  document.getElementById('feed').innerHTML=list.length?list.map(i=>`
+    <div class="item">
+      <div class="t">${srcIcon(i.src)}${esc(i.title)}${i.heat==='高'?' <span class="hot">🔥</span>':''}</div>
+      <div class="meta">
+        <span>${esc(i.ch)}</span>
+        ${i.views?`<span class="hot">${fmtN(i.views)} 次觀看</span>`:''}
+        <span>${i.at?ago(i.at):(i.fetchedAt?ago(new Date(i.fetchedAt).toISOString())+'發現':'')}</span>
+        ${i.why?`<span>· ${esc(i.why)}</span>`:''}
+        ${i.gen===2?`<span title="深度探索發現">🕸️${i.foundBy?' 由「'+esc(i.foundBy)+'」發現':''}</span>`:''}
+      </div>
+      <div class="acts">
+        <a class="btn sm ghost" href="${esc(i.link)}" target="_blank" style="text-decoration:none">開啟</a>
+        <button class="btn sm ghost" onclick="quickWhy('${i.id}',this)">⚡ 快摘要</button>
+        <button class="btn sm" onclick="toIdea('${i.id}')">＋轉靈感</button>
+      </div>
+      <div class="whybox" id="why_${i.id}"></div>
+    </div>`).join(''):'<div class="empty">這個平台目前沒有項目</div>';
+  // 圖表
+  const cnt={};items.forEach(i=>cnt[i.src]=(cnt[i.src]||0)+1);
+  const labels=Object.keys(cnt);
+  if(chSrc)chSrc.destroy();
+  chSrc=new Chart(document.getElementById('chSrc'),{type:'bar',
+    data:{labels,datasets:[{data:labels.map(l=>cnt[l]),backgroundColor:['#e5484d','#2b66e8','#d6409f','#555','#e8930c'],borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  // Top5
+  document.getElementById('topList').innerHTML=yt.slice(0,5).map(v=>
+    `<div class="row"><a href="${esc(v.link)}" target="_blank">${esc(v.title.slice(0,26))}${v.title.length>26?'…':''}</a><span class="v">${fmtN(v.views)}</span></div>`).join('')||'-';
+}
+
+// ── AI 快速摘要(整體)──
+async function makeBrief(force){
+  const el=document.getElementById('briefBody'),tEl=document.getElementById('briefTime');
+  if(!hasAI()){el.textContent='填入 Gemini 金鑰後,這裡會自動產出今日重點摘要與拍片建議(到管理儀表板 ⚙️ 設定)';return}
+  let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_SUM))}catch(e){}
+  if(!force&&cache&&Date.now()-cache.at<1800e3){el.textContent=cache.text;tEl.textContent='更新於 '+new Date(cache.at).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});return}
+  if(!items.length)return;
+  el.textContent='🧠 AI 彙整各平台情報中…';
+  try{
+    const feed=items.slice(0,30).map(i=>`[${i.src}]${i.title}${i.views?`(${fmtN(i.views)}觀看)`:''}${i.why?`(${i.why})`:''}`).join('\n')
+      +(events.length?'\n'+events.slice(0,6).map(ev=>`[活動]${ev.date} ${ev.who}「${ev.title}」${ev.place||''}`).join('\n'):'');
+    const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/${gemModel()}:generateContent?key=${k}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:`你是台灣啦啦隊主題 YouTube 頻道的情報官。以下是剛抓到的各平台熱門清單:\n${feed}\n\n請用繁體中文輸出:\n📌 今日重點(5條,每條≤25字,標來源平台)\n🎬 今天就能拍(3個短影片建議,各附一個吸睛標題)\n直接輸出內容,不要開場白。`}]}]})
+    });
+    const j=await r.json();
+    const txt=(((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+    if(!txt)throw new Error('沒有回傳內容');
+    el.textContent=txt;
+    localStorage.setItem(KEY_SUM,JSON.stringify({at:Date.now(),text:txt}));
+    tEl.textContent='更新於 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){el.innerHTML=`❌ 摘要失敗:${esc(e.message)} <span class="fchip" onclick="pplxFallback()">🔎 改用 Perplexity 網頁版查</span>`}
+}
+
+// ── 單條快摘要(為何熱門)──
+async function quickWhy(id,btn){
+  const i=items.find(x=>x.id===id);if(!i)return;
+  const box=document.getElementById('why_'+id);
+  if(box.style.display==='block'){box.style.display='none';return}
+  if(!hasAI()){toast('需要 Gemini 金鑰(儀表板 ⚙️ 設定)');return}
+  box.style.display='block';box.textContent='🔎 查證中…';
+  if(btn)btn.disabled=true;
+  try{
+    const txt=await aiText(`用搜尋查「${i.title}」這個台灣啦啦隊相關話題。繁體中文輸出:1)發生什麼事(≤40字) 2)為何熱門(≤30字) 3)頻道可以怎麼蹭(≤30字)。直接輸出。`,true);
+    box.textContent=txt||'查不到更多資訊';
+  }catch(e){box.textContent='❌ '+e.message}
+  finally{if(btn)btn.disabled=false}
+}
+
+// ── 深度探索:動態關鍵詞(session 限定、點擊開關、變更自動重搜)──
+let dynKws=[],deepBusy=false,lastDeepStatus='';
+const KEY_DYN='ysyd_dyn',KEY_DYNH='ysyd_dyn_hist';
+function saveDyn(){try{localStorage.setItem(KEY_DYN,JSON.stringify({kws:dynKws,status:lastDeepStatus,day:todayLocal(),at:Date.now()}))}catch(e){}}
+function loadDyn(){
+  try{
+    const d=JSON.parse(localStorage.getItem(KEY_DYN));
+    if(d&&Array.isArray(d.kws)){dynKws=d.kws;lastDeepStatus=d.status||''}
+    // 去重+上限15(防暴增)
+    const seenK=new Set();
+    dynKws=dynKws.filter(x=>{if(!x||!x.kw||seenK.has(x.kw))return false;seenK.add(x.kw);return true}).slice(-40);
+    if(d&&d.day&&d.day!==todayLocal()&&dynKws.length){
+      let h=[];try{h=JSON.parse(localStorage.getItem(KEY_DYNH))||[]}catch(e){}
+      h.unshift({date:d.day,kws:dynKws.map(x=>x.kw)});
+      localStorage.setItem(KEY_DYNH,JSON.stringify(h.slice(0,30)));
+      dynKws=[];
+      lastDeepStatus='🗓️ 新的一天:昨日關鍵詞已歸檔(見📜歷史),更新後會自動探索今日新詞';
+      saveDyn();
+    }
+  }catch(e){}
+}
+function activeDyn(){return dynKws.filter(d=>d.on).map(d=>d.kw)}
+function renderDynChips(status){
+  if(status!==undefined)lastDeepStatus=status;
+  saveDyn();
+  const bar=document.getElementById('deepBar');
+  if(!dynKws.length){bar.style.display='none';return}
+  bar.style.display='block';
+  const chips=dynKws.map((d,i)=>
+    `<span class="fchip ${d.on?'on':''}" style="margin:3px 2px" onclick="toggleDynKw(${i})">${d.on?'✓ ':''}${esc(d.kw)}</span>
+     <span title="用「${esc(d.kw)}」開 IG 站內搜尋" style="cursor:pointer;font-size:11px" onclick="nativeSearch('ig',decodeURIComponent('${encodeURIComponent(d.kw)}'))">📸</span><span title="用「${esc(d.kw)}」開 Threads 站內搜尋" style="cursor:pointer;font-size:11px;margin-right:4px" onclick="nativeSearch('th',decodeURIComponent('${encodeURIComponent(d.kw)}'))">🧵</span>`).join('');
+  bar.innerHTML=`🕸️ <b>動態關鍵詞</b>(每日更新;點擊開/關,變更後自動重搜)
+    <span class="fchip" style="margin-left:6px" onclick="toggleDynHist()">📜 歷史</span><br>
+    ${chips}<br><span class="sub">${lastDeepStatus||''}</span>
+    <div id="dynHist" style="display:none;margin-top:8px;border-top:1px solid var(--border);padding-top:8px"></div>`;
+}
+function toggleDynHist(){
+  const el=document.getElementById('dynHist');if(!el)return;
+  if(el.style.display==='block'){el.style.display='none';return}
+  let h=[];try{h=JSON.parse(localStorage.getItem(KEY_DYNH))||[]}catch(e){}
+  el.style.display='block';
+  el.innerHTML=h.length?'<b>📜 關鍵詞歷史</b>(點任一詞加回今日組合):<br>'+h.slice(0,14).map(d=>
+    `<div style="margin:4px 0"><b>${esc(d.date)}</b>:${d.kws.map(k=>`<span class="fchip" style="margin:2px" onclick="reAddKw(decodeURIComponent('${encodeURIComponent(k)}'))">${esc(k)}</span>`).join('')}</div>`).join('')
+    :'<span class="sub">還沒有歷史紀錄(跨日後自動歸檔)</span>';
+}
+function reAddKw(kw){
+  if(dynKws.some(d=>d.kw===kw)){toast('「'+kw+'」已在今日詞組');return}
+  dynKws.push({kw,on:true});
+  renderDynChips('已從歷史加回「'+kw+'」,重搜中…');
+  if(deepBusy){deepPending=true}else{deepSearch()}
+}
+async function deepExplore(){
+  if(deepBusy){toast('深搜進行中,稍等一下');return}
+  if(!hasAI()){toast('需要 Gemini 金鑰(儀表板 ⚙️ 設定)');return}
+  if(!items.length){toast('先等基本情報載入完成再探索');return}
+  const bar=document.getElementById('deepBar');
+  bar.style.display='block';
+  bar.innerHTML='🕸️ 從現有 '+items.length+' 條情報萃取新關鍵詞…';
+  try{
+    const feed=items.slice(0,40).map(i=>i.title+(i.why?'('+i.why+')':'')).join('\n');
+    const known=[...topicKws(),...dynKws.map(d=>d.kw)];
+    const txt=await aiText(`以下是台灣啦啦隊相關的熱門標題清單:\n${feed}\n\n從清單中萃取「值得進一步搜尋」的新關鍵詞:出現的人名、事件名、活動名、流行梗、新竄起的成員。只保留與台灣/韓國啦啦隊「直接相關」的詞(成員人名、應援、球團、見面會等),與啦啦隊無關的藝人、社會事件、負面新聞一律排除。排除這些已知詞:${known.join('、')}。只輸出 JSON 字串陣列,最多8個,依熱度排序,例如 ["關鍵詞1","關鍵詞2"],不要輸出其他文字。`,false);
+    const m=txt.match(/\[[\s\S]*?\]/);
+    if(!m)throw new Error('萃取不到新關鍵詞');
+    const fresh=JSON.parse(m[0]).filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim())
+      .filter(k=>!known.includes(k)).slice(0,8);
+    fresh.forEach(k=>{
+      if(dynKws.length>=40){const idx=dynKws.findIndex(d2=>!d2.on);if(idx>=0)dynKws.splice(idx,1);else return}
+      dynKws.push({kw:k,on:true});
+    });
+    if(!dynKws.length)throw new Error('這一輪沒有發現新關鍵詞');
+    renderDynChips(fresh.length?`發現 ${fresh.length} 個新詞,深搜中…約20秒`:'沒有更多新詞,以現有組合重搜…');
+    await deepSearch();
+  }catch(e){bar.innerHTML='❌ 深度探索失敗:'+esc(e.message)}
+}
+let deepPending=false;
+async function toggleDynKw(i){
+  if(!dynKws[i].on&&activeDyn().length>=15){toast('最多同時啟用 15 個關鍵詞,先關掉一些再開');return}
+  dynKws[i].on=!dynKws[i].on;
+  renderDynChips('關鍵詞組合變更…(搜尋中仍可繼續點選,會以最新組合執行)');
+  if(deepBusy){deepPending=true;return}
+  await deepSearch();
+}
+// 從新結果自動萃取更多新詞加入動態群(預設關閉,點擊即啟用重搜)
+async function autoExtendKws(newItems){
+  if(!newItems.length)return 0;
+  try{
+    const known=[...topicKws(),...dynKws.map(d=>d.kw)];
+    const txt=await aiText(`以下是新抓到的台灣啦啦隊相關熱門標題:\n${newItems.slice(0,20).map(i=>i.title).join('\n')}\n\n萃取值得進一步搜尋的新關鍵詞(人名/事件/活動/梗),只保留與啦啦隊直接相關的,排除已知詞:${known.join('、')}。只輸出 JSON 字串陣列,最多5個,不要其他文字。`,false);
+    const m=txt.match(/\[[\s\S]*?\]/);if(!m)return 0;
+    const fresh=JSON.parse(m[0]).filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim()).filter(k=>!known.includes(k)).slice(0,5);
+    let addedN=0;
+    fresh.forEach(k=>{
+      if(dynKws.length>=40){const idx=dynKws.findIndex(d2=>!d2.on);if(idx>=0)dynKws.splice(idx,1);else return}
+      dynKws.push({kw:k,on:false});addedN++;
+    });
+    return addedN;
+  }catch(e){return 0}
+}
+async function deepSearch(){
+  deepBusy=true;
+  try{
+    do{
+      deepPending=false;
+      let base=items.filter(i=>i.gen!==2||i.ext);
+      const act=activeDyn().slice(0,15);
+      let added=0;const newOnes=[];
+      if(act.length){
+        const yt2=await fetchYT(act);
+        // IG/Threads:一次一個關鍵詞,逐一精準搜尋
+        const cross2=[];
+        for(const kw of act.slice(0,4)){
+          renderDynChips(`🔎 IG/Threads 逐詞搜尋中:「${esc(kw)}」…`);
+          cross2.push(...await crossOne(kw));
+          if(deepPending)break;
+        }
+        const seenId=new Set(base.map(i=>i.id)),seenT=new Set(base.map(i=>i.title));
+        [...cross2,...yt2].forEach(i=>{
+          if(seenId.has(i.id)||seenT.has(i.title))return;
+          i.gen=2;
+          i.foundBy=i.foundBy||act.find(k=>(i.title+' '+(i.why||'')+' '+(i.ch||'')).includes(k))||'';
+          base.push(i);seenT.add(i.title);newOnes.push(i);added++;
+        });
+      }
+      if(deepPending)continue; // 中途切換了關鍵字 → 以最新組合重跑
+      items=base.sort((a,b)=>sortKeyT(b)-sortKeyT(a));
+      localStorage.setItem(KEY_INTEL,JSON.stringify({at:Date.now(),kw:topicKws().join(','),items}));
+      if(act.length)localStorage.setItem('ysyd_lastdeep',String(Date.now()));
+      const extN=newOnes.length>=3?await autoExtendKws(newOnes):0;
+      if(deepPending)continue;
+      renderAll();
+      renderDynChips(`✅ 啟用 ${act.length} 個動態詞、新增 ${added} 條情報(標 🕸️)。${extN?`並自動發現 ${extN} 個新詞(灰色未啟用,點擊即搜)。`:''}`);
+      if(added>0)makeBrief(true);
+    }while(deepPending);
+  }catch(e){renderDynChips(`❌ ${esc(e.message)} <span class="fchip" onclick="pplxFallback()">🔎 改用 Perplexity 網頁版查這題</span>`)}
+  finally{deepBusy=false}
+}
+// IG/Threads 站內搜尋:免 API 免 token,開你登入的平台原生搜尋
+function nativeSearch(platform,kw){
+  const k=kw||activeDyn()[0]||topicKws()[0];
+  const u=platform==='ig'
+    ?'https://www.instagram.com/explore/search/keyword/?q='+encodeURIComponent(k)
+    :'https://www.threads.net/search?q='+encodeURIComponent(k)+'&serp_type=default';
+  window.open(u,'_blank');
+}
+// 第二順位:Gemini 失敗時,把同樣的查詢帶到 Perplexity 網頁版(用你的訂閱)
+function pplx(q){window.open('https://www.perplexity.ai/search?q='+encodeURIComponent(q),'_blank')}
+function pplxFallback(){
+  const kws=[...topicKws().slice(0,5),...activeDyn()];
+  pplx(`最近7天「${kws.join('、')}」在 YouTube、Instagram、Threads、新聞上的熱門話題與爆紅事件有哪些?依時間新到舊列出,每條附原始連結與發布日期,並給我3個適合台灣啦啦隊主題YouTube頻道的短影片切入角度。`);
+}
+// ── 近期啦啦隊活動(讀 cpblgirls.tw 活動查詢頁)──
+const KEY_EV='ysyd_events';
+let events=[];
+async function fetchEvents(force){
+  const el=document.getElementById('evList');
+  if(!hasAI()){el.innerHTML='<div class="sub">需 Gemini 金鑰(儀表板 ⚙️ 設定)</div>';return}
+  let cache=null;try{cache=JSON.parse(localStorage.getItem(KEY_EV))}catch(e){}
+  if(!force&&cache&&Date.now()-cache.at<6*3600e3){events=cache.items||[];renderEvents();return}
+  el.innerHTML='<div class="sub">📅 讀取活動資料中…</div>';
+  const prompt=`列出台灣啦啦隊近期公開活動(見面會、一日店長、路跑、簽名會等)。只輸出 JSON 陣列:[{"date":"MM/DD","time":"HH:MM或空字串","who":"成員名","title":"活動名","place":"地點","team":"隊伍或空字串"}],依日期由近到遠排序,最多15筆,不要輸出其他文字。`;
+  try{
+    let j=null;
+    try{
+      // 首選:直接讀活動查詢頁
+      const r=await gemFetch(k=>`https://generativelanguage.googleapis.com/v1beta/models/${gemModel()}:generateContent?key=${k}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:`請讀取這個頁面:https://cpblgirls.tw/linebot/frontend/event_list.php\n根據頁面內容,${prompt}`}]}],tools:[{url_context:{}}]})
+      });
+      j=await r.json();
+    }catch(e){
+      // 後備:搜尋(Gemini 忙線時自動走 Perplexity)
+      j={candidates:[{content:{parts:[{text:await aiText(`用搜尋查台灣啦啦隊近期活動,${prompt}`,true)}]}}]};
+    }
+    const txt=(((j.candidates||[])[0]||{}).content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('');
+    const m=txt.match(/\[[\s\S]*\]/);
+    if(!m)throw new Error('讀不到活動資料');
+    events=JSON.parse(m[0]).filter(x=>x&&x.title).slice(0,15);
+    localStorage.setItem(KEY_EV,JSON.stringify({at:Date.now(),items:events}));
+    renderEvents();
+  }catch(e){el.innerHTML='<div class="sub">❌ '+esc(e.message)+'</div>'}
+}
+function renderEvents(){
+  const el=document.getElementById('evList');
+  if(!events.length){el.innerHTML='<div class="sub">目前沒有活動資料</div>';return}
+  el.innerHTML=events.map((ev,i)=>`
+    <div class="row" style="align-items:center">
+      <div style="flex:1"><b style="color:var(--accent)">${esc(ev.date)}</b> ${esc(ev.who)}<br>
+        <span class="sub">${esc(ev.title)}${ev.place?' · '+esc(ev.place):''}${ev.time?' · '+esc(ev.time):''}</span></div>
+      <button class="btn sm" onclick="evIdea(${i})" title="轉成拍片靈感">＋</button>
+    </div>`).join('')+`<div class="sub" style="margin-top:6px">資料來源:cpblgirls.tw 啦啦隊活動查詢 · 6小時更新</div>`;
+}
+function evIdea(i){
+  const ev=events[i];if(!ev)return;
+  let ideas=[];try{ideas=JSON.parse(localStorage.getItem('ysyd_ideas'))||[]}catch(e){}
+  ideas.push({id:uid(),text:`蹭活動:${ev.date} ${ev.who}「${ev.title}」${ev.place||''}`,createdAt:new Date().toISOString().slice(0,10)});
+  localStorage.setItem('ysyd_ideas',JSON.stringify(ideas));
+  toast('已存進儀表板的靈感庫 💡');
+}
+// ── 轉靈感(寫進與儀表板共用的靈感庫)──
+function toIdea(id){
+  const i=items.find(x=>x.id===id);if(!i)return;
+  let ideas=[];try{ideas=JSON.parse(localStorage.getItem('ysyd_ideas'))||[]}catch(e){}
+  const d=new Date();
+  ideas.push({id:uid(),text:'蹭話題:'+i.title,createdAt:d.toISOString().slice(0,10)});
+  localStorage.setItem('ysyd_ideas',JSON.stringify(ideas));
+  toast('已存進儀表板的靈感庫 💡');
+}
+
+// 啟動
+loadCfg();loadDyn();
+if(dynKws.length)renderDynChips();
+fetchEvents(false);
+refreshAll(false);
+setInterval(()=>refreshAll(false),1800e3);
+</script>
+</body>
+</html>
